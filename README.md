@@ -1,13 +1,11 @@
-# Attention-Is-All-You-Need-In-Speech-Separation
+# Monaural multi-speaker speech separaion
 
-Attention Is All You Need In Speech Separation
+Monaural multi-speaker speech separaion
 
+Attention is all you need in speech seaparation
 Download address：https://arxiv.org/abs/2010.13154
 
-第一步，运行 perprocess.py 读取数据地址; ./config/train/train.json 设置参数；
- 
-第二步，训练模型，运行 train.py ;
+Perceiver: General Perception with Iterative Attention
+Download addess: https://arxiv.org/pdf/2103.03206v2.pdf
 
-第三步，测试分数，运行 evaluate.py；
-
-第四步，分离语音，运行 separate.py。
+Attempting the source separation using the perceiver as the transformer model modifying the transformer used by the paper " Attention is all you need in speech separation ".
