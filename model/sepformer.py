@@ -7,7 +7,6 @@ import math
 
 
 class Encoder(nn.Module):
-
     def __init__(self, L, N):
 
         super(Encoder, self).__init__()
@@ -16,12 +15,14 @@ class Encoder(nn.Module):
 
         self.N = N  # Output channel size
 
-        self.Conv1d = nn.Conv1d(in_channels=1,
-                                out_channels=N,
-                                kernel_size=L,
-                                stride=L//2,
-                                padding=0,
-                                bias=False)
+        self.Conv1d = nn.Conv1d(
+            in_channels=1,
+            out_channels=N,
+            kernel_size=L,
+            stride=L // 2,
+            padding=0,
+            bias=False,
+        )
 
         self.ReLU = nn.ReLU()
 
@@ -35,7 +36,6 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-
     def __init__(self, L, N):
 
         super(Decoder, self).__init__()
@@ -44,12 +44,14 @@ class Decoder(nn.Module):
 
         self.N = N
 
-        self.ConvTranspose1d = nn.ConvTranspose1d(in_channels=N,
-                                                  out_channels=1,
-                                                  kernel_size=L,
-                                                  stride=L//2,
-                                                  padding=0,
-                                                  bias=False)
+        self.ConvTranspose1d = nn.ConvTranspose1d(
+            in_channels=N,
+            out_channels=1,
+            kernel_size=L,
+            stride=L // 2,
+            padding=0,
+            bias=False,
+        )
 
     def forward(self, x):
 
@@ -60,24 +62,24 @@ class Decoder(nn.Module):
 
 class TransformerEncoderLayer(Module):
     """
-        TransformerEncoderLayer is made up of self-attn and feedforward network.
-        This standard encoder layer is based on the paper "Attention Is All You Need".
-        Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
-        Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in
-        Neural Information Processing Systems, pages 6000-6010. Users may modify or implement
-        in a different way during application.
+    TransformerEncoderLayer is made up of self-attn and feedforward network.
+    This standard encoder layer is based on the paper "Attention Is All You Need".
+    Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
+    Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in
+    Neural Information Processing Systems, pages 6000-6010. Users may modify or implement
+    in a different way during application.
 
-        Args:
-            d_model: the number of expected features in the input (required).
-            nhead: the number of heads in the multiheadattention models (required).
-            dim_feedforward: the dimension of the feedforward network model (default=2048).
-            dropout: the dropout value (default=0.1).
-            activation: the activation function of intermediate layer, relu or gelu (default=relu).
+    Args:
+        d_model: the number of expected features in the input (required).
+        nhead: the number of heads in the multiheadattention models (required).
+        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dropout: the dropout value (default=0.1).
+        activation: the activation function of intermediate layer, relu or gelu (default=relu).
 
-        Examples:
-            >>> encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
-            >>> src = torch.rand(10, 32, 512)
-            >>> out = encoder_layer(src)
+    Examples:
+        >>> encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
+        >>> src = torch.rand(10, 32, 512)
+        >>> out = encoder_layer(src)
     """
 
     def __init__(self, d_model, nhead, dropout=0):
@@ -90,16 +92,20 @@ class TransformerEncoderLayer(Module):
 
         self.LayerNorm2 = nn.LayerNorm(normalized_shape=d_model)
 
-        self.FeedForward = nn.Sequential(nn.Linear(d_model, d_model*2*2),
-                                         nn.ReLU(),
-                                         nn.Linear(d_model*2*2, d_model))
+        self.FeedForward = nn.Sequential(
+            nn.Linear(d_model, d_model * 2 * 2),
+            nn.ReLU(),
+            nn.Linear(d_model * 2 * 2, d_model),
+        )
 
     def forward(self, z1):
 
         ln_z1 = self.LayerNorm1(z1)
-
-        z2 = self.self_attn(ln_z1, ln_z1, ln_z1,
-                            attn_mask=None, key_padding_mask=None)[0]
+        print(ln_z1.size())
+        exit()
+        z2 = self.self_attn(ln_z1, ln_z1, ln_z1, attn_mask=None, key_padding_mask=None)[
+            0
+        ]
 
         print(z2.shape)
 
@@ -110,9 +116,9 @@ class TransformerEncoderLayer(Module):
 
 class Positional_Encoding(nn.Module):
     """
-        Implement the positional encoding (PE) function.
-        PE(pos, 2i)   = sin(pos/(10000^(2i/dmodel)))
-        PE(pos, 2i+1) = cos(pos/(10000^(2i/dmodel)))
+    Implement the positional encoding (PE) function.
+    PE(pos, 2i)   = sin(pos/(10000^(2i/dmodel)))
+    PE(pos, 2i+1) = cos(pos/(10000^(2i/dmodel)))
     """
 
     def __init__(self, d_model, max_len=5000):
@@ -122,17 +128,18 @@ class Positional_Encoding(nn.Module):
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model, requires_grad=False)
         position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(
-            0, d_model, 2).float() * -(math.log(10000.0) / d_model))
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)
+        )
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, input):
         """
-            Args:
-                input: N x T x D
+        Args:
+            input: N x T x D
         """
         length = input.size(1)
 
@@ -140,51 +147,51 @@ class Positional_Encoding(nn.Module):
 
 
 class DPTBlock(nn.Module):
-
     def __init__(self, input_size, nHead, Local_B):
 
         super(DPTBlock, self).__init__()
 
         self.Local_B = Local_B
-
         self.intra_PositionalEncoding = Positional_Encoding(
-            d_model=input_size, max_len=5000)
+            d_model=input_size, max_len=5000
+        )
         self.intra_transformer = nn.ModuleList([])
         for i in range(self.Local_B):
-            self.intra_transformer.append(TransformerEncoderLayer(d_model=input_size,
-                                                                  nhead=nHead,
-                                                                  dropout=0))
+            self.intra_transformer.append(
+                TransformerEncoderLayer(d_model=input_size, nhead=nHead, dropout=0)
+            )
 
         self.inter_PositionalEncoding = Positional_Encoding(
-            d_model=input_size, max_len=5000)
+            d_model=input_size, max_len=5000
+        )
         self.inter_transformer = nn.ModuleList([])
         for i in range(self.Local_B):
-            self.inter_transformer.append(TransformerEncoderLayer(d_model=input_size,
-                                                                  nhead=nHead,
-                                                                  dropout=0))
+            self.inter_transformer.append(
+                TransformerEncoderLayer(d_model=input_size, nhead=nHead, dropout=0)
+            )
 
     def forward(self, z):
 
         B, N, K, P = z.shape  # torch.Size([1, 64, 250, 130])
 
         # intra DPT
-        row_z = z.permute(0, 3, 2, 1).reshape(B*P, K, N)
+        print(f"z1:{z.size()}")
+        row_z = z.permute(0, 3, 2, 1).reshape(B * P, K, N)
+        print(f"rowz1:{row_z.size()}")
         row_z1 = row_z + self.intra_PositionalEncoding(row_z)
-
+        print(f"row final :{row_z1.size()}")
         for i in range(self.Local_B):
-            row_z1 = self.intra_transformer[i](
-                row_z1.permute(1, 0, 2)).permute(1, 0, 2)
+            row_z1 = self.intra_transformer[i](row_z1.permute(1, 0, 2)).permute(1, 0, 2)
 
         row_f = row_z1 + row_z
         row_output = row_f.reshape(B, P, K, N).permute(0, 3, 2, 1)
 
         # inter DPT
-        col_z = row_output.permute(0, 2, 3, 1).reshape(B*K, P, N)
+        col_z = row_output.permute(0, 2, 3, 1).reshape(B * K, P, N)
         col_z1 = col_z + self.inter_PositionalEncoding(col_z)
 
         for i in range(self.Local_B):
-            col_z1 = self.inter_transformer[i](
-                col_z1.permute(1, 0, 2)).permute(1, 0, 2)
+            col_z1 = self.inter_transformer[i](col_z1.permute(1, 0, 2)).permute(1, 0, 2)
 
         col_f = col_z1 + col_z
         col_output = col_f.reshape(B, K, P, N).permute(0, 3, 1, 2)
@@ -193,7 +200,6 @@ class DPTBlock(nn.Module):
 
 
 class Separator(nn.Module):
-
     def __init__(self, N, C, H, K, Global_B, Local_B):
 
         super(Separator, self).__init__()
@@ -209,19 +215,21 @@ class Separator(nn.Module):
             self.DPT.append(DPTBlock(N, H, self.Local_B))
 
         self.LayerNorm = nn.LayerNorm(self.N)
-        self.Linear1 = nn.Linear(
-            in_features=self.N, out_features=self.N, bias=None)
+        self.Linear1 = nn.Linear(in_features=self.N, out_features=self.N, bias=None)
 
         self.PReLU = nn.PReLU()
-        self.Linear2 = nn.Linear(
-            in_features=self.N, out_features=self.N*2, bias=None)
+        self.Linear2 = nn.Linear(in_features=self.N, out_features=self.N * 2, bias=None)
 
-        self.FeedForward1 = nn.Sequential(nn.Linear(self.N, self.N*2*2),
-                                          nn.ReLU(),
-                                          nn.Linear(self.N*2*2, self.N))
-        self.FeedForward2 = nn.Sequential(nn.Linear(self.N, self.N*2*2),
-                                          nn.ReLU(),
-                                          nn.Linear(self.N*2*2, self.N))
+        self.FeedForward1 = nn.Sequential(
+            nn.Linear(self.N, self.N * 2 * 2),
+            nn.ReLU(),
+            nn.Linear(self.N * 2 * 2, self.N),
+        )
+        self.FeedForward2 = nn.Sequential(
+            nn.Linear(self.N, self.N * 2 * 2),
+            nn.ReLU(),
+            nn.Linear(self.N * 2 * 2, self.N),
+        )
         self.ReLU = nn.ReLU()
 
     def forward(self, x):
@@ -263,16 +271,15 @@ class Separator(nn.Module):
         batch_size, dim, seq_len = input.shape
         segment_stride = segment_size // 2
 
-        rest = segment_size - (segment_stride + seq_len %
-                               segment_size) % segment_size
+        rest = segment_size - (segment_stride + seq_len % segment_size) % segment_size
 
         if rest > 0:
-            pad = Variable(torch.zeros(batch_size, dim, rest)
-                           ).type(input.type())
+            pad = Variable(torch.zeros(batch_size, dim, rest)).type(input.type())
             input = torch.cat([input, pad], 2)
 
-        pad_aux = Variable(torch.zeros(
-            batch_size, dim, segment_stride)).type(input.type())
+        pad_aux = Variable(torch.zeros(batch_size, dim, segment_stride)).type(
+            input.type()
+        )
 
         input = torch.cat([pad_aux, input, pad_aux], 2)
 
@@ -282,17 +289,28 @@ class Separator(nn.Module):
 
         # 将特征分割成段大小的块
         # 输入特征: (B, N, T)
-
+        print(f"input insplit feautre {input.size()}")
         input, rest = self.pad_segment(input, segment_size)
+        print(f"input after pad feautre {input.size()}")
+
         batch_size, dim, seq_len = input.shape
         segment_stride = segment_size // 2
 
-        segments1 = input[:, :, :-segment_stride].contiguous().view(batch_size,
-                                                                    dim, -1, segment_size)
-        segments2 = input[:, :, segment_stride:].contiguous().view(
-            batch_size, dim, -1, segment_size)
-        segments = torch.cat([segments1, segments2], 3).view(
-            batch_size, dim, -1, segment_size).transpose(2, 3)
+        segments1 = (
+            input[:, :, :-segment_stride]
+            .contiguous()
+            .view(batch_size, dim, -1, segment_size)
+        )
+        segments2 = (
+            input[:, :, segment_stride:]
+            .contiguous()
+            .view(batch_size, dim, -1, segment_size)
+        )
+        segments = (
+            torch.cat([segments1, segments2], 3)
+            .view(batch_size, dim, -1, segment_size)
+            .transpose(2, 3)
+        )
 
         return segments.contiguous(), rest
 
@@ -303,13 +321,22 @@ class Separator(nn.Module):
 
         batch_size, dim, segment_size, _ = input.shape
         segment_stride = segment_size // 2
-        input = input.transpose(2, 3).contiguous().view(
-            batch_size, dim, -1, segment_size * 2)  # B, N, K, L
+        input = (
+            input.transpose(2, 3)
+            .contiguous()
+            .view(batch_size, dim, -1, segment_size * 2)
+        )  # B, N, K, L
 
-        input1 = input[:, :, :, :segment_size].contiguous().view(
-            batch_size, dim, -1)[:, :, segment_stride:]
-        input2 = input[:, :, :, segment_size:].contiguous().view(
-            batch_size, dim, -1)[:, :, :-segment_stride]
+        input1 = (
+            input[:, :, :, :segment_size]
+            .contiguous()
+            .view(batch_size, dim, -1)[:, :, segment_stride:]
+        )
+        input2 = (
+            input[:, :, :, segment_size:]
+            .contiguous()
+            .view(batch_size, dim, -1)[:, :, :-segment_stride]
+        )
 
         output = input1 + input2
 
@@ -321,13 +348,13 @@ class Separator(nn.Module):
 
 class Sepformer(nn.Module):
     """
-        Args:
-            C: Number of speakers
-            N: Number of filters in autoencoder
-            L: Length of the filters in autoencoder
-            H: Multi-head
-            K: segment size
-            R: Number of repeats
+    Args:
+        C: Number of speakers
+        N: Number of filters in autoencoder
+        L: Length of the filters in autoencoder
+        H: Multi-head
+        K: segment size
+        R: Number of repeats
     """
 
     def __init__(self, N=64, C=2, L=4, H=4, K=250, Global_B=2, Local_B=4):
@@ -345,7 +372,8 @@ class Sepformer(nn.Module):
         self.encoder = Encoder(self.L, self.N)
 
         self.separator = Separator(
-            self.N, self.C, self.H, self.K, self.Global_B, self.Local_B)
+            self.N, self.C, self.H, self.K, self.Global_B, self.Local_B
+        )
 
         self.decoder = Decoder(self.L, self.N)
 
@@ -355,8 +383,9 @@ class Sepformer(nn.Module):
         # Make up for zero，torch.Size([1, 1, 32006])
         # print(type(x))
         x = x.unsqueeze(0)
+        print(f"xshape{x.shape}")
         x, rest = self.pad_signal(x)
-
+        print(f"xshape{x.shape}")
         # [B, 1, T] -> [B, N, I]，torch.Size([1, 64, 16002])
         enc_out = self.encoder(x)
 
@@ -376,12 +405,13 @@ class Sepformer(nn.Module):
         # Decoding
         audio = [self.decoder(out[i]) for i in range(self.C)]  # C * [B, 1, T]
 
-        audio[0] = audio[0][:, :, self.L // 2:-
-                            (rest + self.L // 2)].contiguous()  # B, 1, T
-        audio[1] = audio[1][:, :, self.L // 2:-
-                            (rest + self.L // 2)].contiguous()  # B, 1, T
+        audio[0] = audio[0][
+            :, :, self.L // 2 : -(rest + self.L // 2)
+        ].contiguous()  # B, 1, T
+        audio[1] = audio[1][
+            :, :, self.L // 2 : -(rest + self.L // 2)
+        ].contiguous()  # B, 1, T
         audio = torch.cat(audio, dim=1)  # [B, C, T]
-
         return audio
 
     def pad_signal(self, input):
@@ -403,8 +433,7 @@ class Sepformer(nn.Module):
             pad = Variable(torch.zeros(batch_size, 1, rest)).type(input.type())
             input = torch.cat([input, pad], dim=2)
 
-        pad_aux = Variable(torch.zeros(
-            batch_size, 1, self.L // 2)).type(input.type())
+        pad_aux = Variable(torch.zeros(batch_size, 1, self.L // 2)).type(input.type())
 
         input = torch.cat([pad_aux, input, pad_aux], 2)
 
@@ -422,11 +451,17 @@ class Sepformer(nn.Module):
     @classmethod
     def load_model_from_package(cls, package):
 
-        model = cls(N=package['N'], C=package['C'], L=package['L'],
-                    H=package['H'], K=package['K'], Global_B=package['Global_B'],
-                    Local_B=package['Local_B'])
+        model = cls(
+            N=package["N"],
+            C=package["C"],
+            L=package["L"],
+            H=package["H"],
+            K=package["K"],
+            Global_B=package["Global_B"],
+            Local_B=package["Local_B"],
+        )
 
-        model.load_state_dict(package['state_dict'])
+        model.load_state_dict(package["state_dict"])
 
         return model
 
@@ -435,19 +470,22 @@ class Sepformer(nn.Module):
 
         package = {
             # hyper-parameter
-            'N': model.N, 'C': model.C, 'L': model.L,
-            'H': model.H, 'K': model.K, 'Global_B': model.Global_B,
-            'Local_B': model.Local_B,
-
+            "N": model.N,
+            "C": model.C,
+            "L": model.L,
+            "H": model.H,
+            "K": model.K,
+            "Global_B": model.Global_B,
+            "Local_B": model.Local_B,
             # state
-            'state_dict': model.state_dict(),
-            'optim_dict': optimizer.state_dict(),
-            'epoch': epoch
+            "state_dict": model.state_dict(),
+            "optim_dict": optimizer.state_dict(),
+            "epoch": epoch,
         }
 
         if tr_loss is not None:
-            package['tr_loss'] = tr_loss
-            package['cv_loss'] = cv_loss
+            package["tr_loss"] = tr_loss
+            package["cv_loss"] = cv_loss
 
         return package
 
@@ -456,16 +494,13 @@ if __name__ == "__main__":
 
     x = torch.rand(1, 32000)
 
-    model = Sepformer(N=256,
-                      C=2,
-                      L=2,
-                      H=8,
-                      K=250,
-                      Global_B=2,
-                      Local_B=8)
+    model = Sepformer(N=256, C=2, L=2, H=8, K=250, Global_B=2, Local_B=8)
 
-    print("{:.3f} million".format(
-        sum([param.nelement() for param in model.parameters()]) / 1e6))
+    print(
+        "{:.3f} million".format(
+            sum([param.nelement() for param in model.parameters()]) / 1e6
+        )
+    )
 
     y = model(x)
 
