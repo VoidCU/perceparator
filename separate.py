@@ -3,6 +3,7 @@ import os
 import librosa
 import torch
 from dataset.data import EvalDataLoader, EvalDataset
+
 # from model.conv_tasnet import ConvTasNet
 # from model.dual_path_rnn import Dual_RNN_model
 # from model.dptnet import DPTNet
@@ -18,7 +19,8 @@ def main(config):
 
     if config["mix_dir"] is None and config["mix_json"] is None:
         print(
-            "Must provide mix_dir or mix_json! When providing mix_dir, mix_json is ignored.")
+            "Must provide mix_dir or mix_json! When providing mix_dir, mix_json is ignored."
+        )
 
     # 加载模型
     # if config["model"] == "conv_tasnet":
@@ -42,17 +44,19 @@ def main(config):
         model.cuda()
 
     # 加载数据
-    eval_dataset = EvalDataset(config["mix_dir"],
-                               config["mix_json"],
-                               batch_size=config["batch_size"],
-                               sample_rate=config["sample_rate"])
+    eval_dataset = EvalDataset(
+        config["mix_dir"],
+        config["mix_json"],
+        batch_size=config["batch_size"],
+        sample_rate=config["sample_rate"],
+    )
 
     eval_loader = EvalDataLoader(eval_dataset, batch_size=1)
 
     os.makedirs(config["out_dir"], exist_ok=True)
-    os.makedirs(config["out_dir"]+"/mix/", exist_ok=True)
-    os.makedirs(config["out_dir"]+"/s1/", exist_ok=True)
-    os.makedirs(config["out_dir"]+"/s2/", exist_ok=True)
+    os.makedirs(config["out_dir"] + "/mix/", exist_ok=True)
+    os.makedirs(config["out_dir"] + "/s1/", exist_ok=True)
+    os.makedirs(config["out_dir"] + "/s2/", exist_ok=True)
 
     # 音频生成函数
     def write_wav(inputs, filename, sr=config["sample_rate"]):
@@ -85,23 +89,31 @@ def main(config):
             for i, filename in enumerate(filenames):
 
                 filename = os.path.join(
-                    config["out_dir"]+"/mix/", os.path.basename(filename).strip('.wav'))
+                    config["out_dir"] + "/mix/",
+                    os.path.basename(filename).strip(".wav"),
+                )
 
-                write_wav(mixture[i], filename + '.wav')
+                write_wav(mixture[i], filename + ".wav")
 
                 C = flat_estimate[i].shape[0]
 
                 for c in range(C):
                     if c == 0:
                         filename = os.path.join(
-                            config["out_dir"]+"/s1/", os.path.basename(filename).strip('.wav'))
+                            config["out_dir"] + "/s1/",
+                            os.path.basename(filename).strip(".wav"),
+                        )
                         write_wav(
-                            flat_estimate[i][c], filename + '_s{}.wav'.format(c + 1))
+                            flat_estimate[i][c], filename + "_s{}.wav".format(c + 1)
+                        )
                     elif c == 1:
                         filename = os.path.join(
-                            config["out_dir"]+"/s2/", os.path.basename(filename).strip('.wav'))
+                            config["out_dir"] + "/s2/",
+                            os.path.basename(filename).strip(".wav"),
+                        )
                         write_wav(
-                            flat_estimate[i][c], filename + '_s{}.wav'.format(c + 1))
+                            flat_estimate[i][c], filename + "_s{}.wav".format(c + 1)
+                        )
                     else:
                         print("Continue To Add")
 
@@ -114,14 +126,16 @@ def main(config):
         print("Data Generation Completed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Speech Separation")
 
-    parser.add_argument("-C",
-                        "--configuration",
-                        default="./config/test/separate.json5",
-                        type=str,
-                        help="Configuration (*.json).")
+    parser.add_argument(
+        "-C",
+        "--configuration",
+        default="./config/test/separate.json5",
+        type=str,
+        help="Configuration (*.json).",
+    )
 
     args = parser.parse_args()
 
