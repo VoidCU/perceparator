@@ -102,7 +102,6 @@ class TransformerEncoderLayer(Module):
 
         ln_z1 = self.LayerNorm1(z1)
         print(ln_z1.size())
-        exit()
         z2 = self.self_attn(ln_z1, ln_z1, ln_z1, attn_mask=None, key_padding_mask=None)[
             0
         ]
@@ -182,7 +181,9 @@ class DPTBlock(nn.Module):
         print(f"row final :{row_z1.size()}")
         for i in range(self.Local_B):
             row_z1 = self.intra_transformer[i](row_z1.permute(1, 0, 2)).permute(1, 0, 2)
-
+        print("hello")
+        print(f"row_z1rs {row_z1.size()} row_z{row_z.size()}")
+        exit()
         row_f = row_z1 + row_z
         row_output = row_f.reshape(B, P, K, N).permute(0, 3, 2, 1)
 
