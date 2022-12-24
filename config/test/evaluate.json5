@@ -17,5 +17,5 @@
   "cal_sdr": true,
 
 
-  "use_cuda": false,
+  "use_cuda": true,
 }

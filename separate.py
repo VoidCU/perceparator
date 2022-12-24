@@ -3,11 +3,12 @@ import os
 import librosa
 import torch
 from dataset.data import EvalDataLoader, EvalDataset
-from model.conv_tasnet import ConvTasNet
-from model.dual_path_rnn import Dual_RNN_model
-from model.dptnet import DPTNet
-from model.galr import GALR
-from model.sandglasset import Sandglasset
+# from model.conv_tasnet import ConvTasNet
+# from model.dual_path_rnn import Dual_RNN_model
+# from model.dptnet import DPTNet
+# from model.galr import GALR
+# from model.sandglasset import Sandglasset
+from model.sepformer import Sepformer
 from src.utils import remove_pad
 import json5
 import time
@@ -16,21 +17,24 @@ import time
 def main(config):
 
     if config["mix_dir"] is None and config["mix_json"] is None:
-        print("Must provide mix_dir or mix_json! When providing mix_dir, mix_json is ignored.")
+        print(
+            "Must provide mix_dir or mix_json! When providing mix_dir, mix_json is ignored.")
 
     # 加载模型
-    if config["model"] == "conv_tasnet":
-        model = ConvTasNet.load_model(config["model_path"])
-    elif config["model"] == "dual_path_rnn":
-        model = Dual_RNN_model.load_model(config["model_path"])
-    elif config["model"] == "dptnet":
-        model = DPTNet.load_model(config["model_path"])
-    elif config["model"] == "galr":
-        model = GALR.load_model(config["model_path"])
-    elif config["model"] == "sandglasset":
-        model = Sandglasset.load_model(config["model_path"])
-    else:
-        print("No loaded model!")
+    # if config["model"] == "conv_tasnet":
+    #     model = ConvTasNet.load_model(config["model_path"])
+    # elif config["model"] == "dual_path_rnn":
+    #     model = Dual_RNN_model.load_model(config["model_path"])
+    # elif config["model"] == "dptnet":
+    #     model = DPTNet.load_model(config["model_path"])
+    # elif config["model"] == "galr":
+    #     model = GALR.load_model(config["model_path"])
+    # elif config["model"] == "sandglasset":
+    #     model = Sandglasset.load_model(config["model_path"])
+    # else:
+    #     print("No loaded model!")
+
+    model = Sepformer.load_model(config["model_path"])
 
     model.eval()  # 将模型设置为校验模式
 
@@ -80,7 +84,8 @@ def main(config):
 
             for i, filename in enumerate(filenames):
 
-                filename = os.path.join(config["out_dir"]+"/mix/", os.path.basename(filename).strip('.wav'))
+                filename = os.path.join(
+                    config["out_dir"]+"/mix/", os.path.basename(filename).strip('.wav'))
 
                 write_wav(mixture[i], filename + '.wav')
 
@@ -88,11 +93,15 @@ def main(config):
 
                 for c in range(C):
                     if c == 0:
-                        filename = os.path.join(config["out_dir"]+"/s1/", os.path.basename(filename).strip('.wav'))
-                        write_wav(flat_estimate[i][c], filename + '_s{}.wav'.format(c + 1))
+                        filename = os.path.join(
+                            config["out_dir"]+"/s1/", os.path.basename(filename).strip('.wav'))
+                        write_wav(
+                            flat_estimate[i][c], filename + '_s{}.wav'.format(c + 1))
                     elif c == 1:
-                        filename = os.path.join(config["out_dir"]+"/s2/", os.path.basename(filename).strip('.wav'))
-                        write_wav(flat_estimate[i][c], filename + '_s{}.wav'.format(c + 1))
+                        filename = os.path.join(
+                            config["out_dir"]+"/s2/", os.path.basename(filename).strip('.wav'))
+                        write_wav(
+                            flat_estimate[i][c], filename + '_s{}.wav'.format(c + 1))
                     else:
                         print("Continue To Add")
 

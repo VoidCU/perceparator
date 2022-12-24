@@ -3,14 +3,13 @@ from mir_eval.separation import bss_eval_sources
 import numpy as np
 import torch
 from dataset.data import AudioDataLoader, AudioDataset
-from src.pit_criterion import cal_loss
+from src.pit_criterion import cal_loss, cal_loss_pit
 from model.sepformer import Sepformer
 from src.utils import remove_pad
 import json5
 
 
 def cal_SDRi(src_ref, src_est, mix):
-
     """
         Calculate Source-to-Distortion Ratio improvement (SDRi).
 
@@ -34,7 +33,6 @@ def cal_SDRi(src_ref, src_est, mix):
 
 
 def cal_SISNR(ref_sig, out_sig, eps=1e-8):
-
     """
         Calcuate Scale-Invariant Source-to-Noise Ratio (SI-SNR)
 
@@ -65,7 +63,6 @@ def cal_SISNR(ref_sig, out_sig, eps=1e-8):
 
 
 def cal_SISNRi(src_ref, src_est, mix):
-
     """
         Calculate Scale-Invariant Source-to-Noise Ratio improvement (SI-SNRi)
 
@@ -102,8 +99,8 @@ def main(config):
 
     model.eval()  # 将模型设置为验证模式
 
-    if torch.cuda.is_available():
-        model.cuda()
+    # if torch.cuda.is_available():
+    #     model.cuda()
 
     # 加载数据
     dataset = AudioDataset(config["evaluate_dataset"]["data_dir"],
@@ -122,24 +119,26 @@ def main(config):
             padded_mixture, mixture_lengths, padded_source = data
 
             # 利用 GPU 运算
-            if torch.cuda.is_available():
-                padded_mixture = padded_mixture.cuda()
-                mixture_lengths = mixture_lengths.cuda()
-                padded_source = padded_source.cuda()
+            # if torch.cuda.is_available():
+            #     padded_mixture = padded_mixture.cuda()
+            #     mixture_lengths = mixture_lengths.cuda()
+            #     padded_source = padded_source.cuda()
 
             # torch.Size([1, 2, 32000]) => torch.Size([1, 2, 32000])
             estimate_source = model(padded_mixture)  # 将数据放入模型
 
-            loss, max_snr, estimate_source, reorder_estimate_source = cal_loss(padded_source,    # mix
-                                                                               estimate_source,  # [s1, s2]
-                                                                               mixture_lengths)  # length
+            loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_pit(padded_source,    # mix
+                                                                                   # [s1, s2]
+                                                                                   estimate_source,
+                                                                                   mixture_lengths)  # length
 
             # Remove padding and flat
             mixture = remove_pad(padded_mixture, mixture_lengths)
             source = remove_pad(padded_source, mixture_lengths)
 
             # NOTE: use reorder estimate source
-            estimate_source = remove_pad(reorder_estimate_source, mixture_lengths)
+            estimate_source = remove_pad(
+                reorder_estimate_source, mixture_lengths)
 
             # for each utterance
             for mix, src_ref, src_est in zip(mixture, source, estimate_source):
@@ -166,7 +165,8 @@ def main(config):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Evaluate Speech Separation Performance")
+    parser = argparse.ArgumentParser(
+        description="Evaluate Speech Separation Performance")
 
     parser.add_argument("-C",
                         "--configuration",

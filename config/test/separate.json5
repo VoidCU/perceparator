@@ -9,7 +9,7 @@
 
   "model": "sandglasset",
 
-  "use_cuda": false,
+  "use_cuda": true,
 
   "sample_rate": 8000,
 

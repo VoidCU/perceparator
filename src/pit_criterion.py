@@ -17,7 +17,8 @@ class MixerMSE(nn.Module):
 
     def forward(self, x, target):
 
-        loss = self.criterion1(x[0, 0, :], target[0, 0, :]) + self.criterion2(x[0, 1, :], target[0, 1, :])
+        loss = self.criterion1(x[0, 0, :], target[0, 0, :]) + \
+            self.criterion2(x[0, 1, :], target[0, 1, :])
 
         return loss
 
@@ -29,11 +30,13 @@ def cal_loss_no(source, estimate_source, source_lengths):
             estimate_source: [B, C, T]
             source_lengths: [B]
     """
-    max_snr, perms, max_snr_idx = cal_si_snr(source, estimate_source, source_lengths)
+    max_snr, perms, max_snr_idx = cal_si_snr(
+        source, estimate_source, source_lengths)
 
     loss = 0 - torch.mean(max_snr)
 
-    reorder_estimate_source = reorder_source(estimate_source, perms, max_snr_idx)
+    reorder_estimate_source = reorder_source(
+        estimate_source, perms, max_snr_idx)
 
     return loss, max_snr, estimate_source, reorder_estimate_source
 
@@ -56,7 +59,8 @@ def cal_si_snr(source, estimate_source, source_lengths):
     # Step 1. Zero-mean norm
     num_samples = source_lengths.view(-1, 1, 1).float()  # [B, 1, 1]
     mean_target = torch.sum(source, dim=2, keepdim=True) / num_samples
-    mean_estimate = torch.sum(estimate_source, dim=2, keepdim=True) / num_samples
+    mean_estimate = torch.sum(estimate_source, dim=2,
+                              keepdim=True) / num_samples
     zero_mean_target = source - mean_target
     zero_mean_estimate = estimate_source - mean_estimate
     # mask padding position along T
@@ -69,8 +73,10 @@ def cal_si_snr(source, estimate_source, source_lengths):
     s_estimate = torch.unsqueeze(zero_mean_estimate, dim=2)  # [B, C, 1, T]
     # print("s_target.type()", s_target.type(), s_estimate.type())
     # s_target = <s', s>s / ||s||^2
-    pair_wise_dot = torch.sum(s_estimate * s_target, dim=3, keepdim=True)  # [B, C, C, 1]
-    s_target_energy = torch.sum(s_target ** 2, dim=3, keepdim=True) + EPS  # [B, 1, C, 1]
+    pair_wise_dot = torch.sum(s_estimate * s_target,
+                              dim=3, keepdim=True)  # [B, C, C, 1]
+    s_target_energy = torch.sum(
+        s_target ** 2, dim=3, keepdim=True) + EPS  # [B, 1, C, 1]
     pair_wise_proj = pair_wise_dot * s_target / s_target_energy  # [B, C, C, T]
     # print("pair_wise_dot.type()", pair_wise_dot.type(), "s_target_energy.type()", s_target_energy.type())
     # print("pair_wise_proj.type()", pair_wise_proj.type())
@@ -78,8 +84,9 @@ def cal_si_snr(source, estimate_source, source_lengths):
     e_noise = s_estimate - pair_wise_proj  # [B, C, C, T]
     # print(e_noise.type())
     # SI-SNR = 10 * log_10(||s_target||^2 / ||e_noise||^2)
-    pair_wise_si_snr = torch.sum(pair_wise_proj ** 2, dim=3) / (torch.sum(e_noise ** 2, dim=3) + EPS)
-    pair_wise_si_snr = 10 * torch.log10(pair_wise_si_snr + EPS) # [B, C, C]
+    pair_wise_si_snr = torch.sum(
+        pair_wise_proj ** 2, dim=3) / (torch.sum(e_noise ** 2, dim=3) + EPS)
+    pair_wise_si_snr = 10 * torch.log10(pair_wise_si_snr + EPS)  # [B, C, C]
     # print("pair_wise_si_snr",pair_wise_si_snr.type())
 
     # Get max_snr of each utterance
@@ -109,11 +116,13 @@ def cal_loss_pit(source, estimate_source, source_lengths):
             estimate_source: [B, C, T]
             source_lengths: [B]
     """
-    max_snr, perms, max_snr_idx = cal_si_snr_with_pit(source, estimate_source, source_lengths)
+    max_snr, perms, max_snr_idx = cal_si_snr_with_pit(
+        source, estimate_source, source_lengths)
 
     loss = 0 - torch.mean(max_snr)
 
-    reorder_estimate_source = reorder_source(estimate_source, perms, max_snr_idx)
+    reorder_estimate_source = reorder_source(
+        estimate_source, perms, max_snr_idx)
 
     return loss, max_snr, estimate_source, reorder_estimate_source
 
@@ -127,6 +136,13 @@ def cal_si_snr_with_pit(source, estimate_source, source_lengths):
             estimate_source: [B, C, T]
             source_lengths: [B], each item is between [0, T]
     """
+    source = source.unsqueeze(0)
+    # # ==============================================================================================
+    # print(type(source))
+    # print(type(estimate_source))
+    # # ==============================================================================================
+    # print(source.size())
+    # print(estimate_source.size())
     assert source.size() == estimate_source.size()
     B, C, T = source.size()  # get all parameters
     # mask padding position along T
@@ -136,7 +152,8 @@ def cal_si_snr_with_pit(source, estimate_source, source_lengths):
     # Step 1. Zero-mean norm
     num_samples = source_lengths.view(-1, 1, 1).float()  # [B, 1, 1]
     mean_target = torch.sum(source, dim=2, keepdim=True) / num_samples
-    mean_estimate = torch.sum(estimate_source, dim=2, keepdim=True) / num_samples
+    mean_estimate = torch.sum(estimate_source, dim=2,
+                              keepdim=True) / num_samples
     zero_mean_target = source - mean_target
     zero_mean_estimate = estimate_source - mean_estimate
     # mask padding position along T
@@ -149,8 +166,10 @@ def cal_si_snr_with_pit(source, estimate_source, source_lengths):
     s_estimate = torch.unsqueeze(zero_mean_estimate, dim=2)  # [B, C, 1, T]
     # print("s_target.type()", s_target.type(), s_estimate.type())
     # s_target = <s', s>s / ||s||^2
-    pair_wise_dot = torch.sum(s_estimate * s_target, dim=3, keepdim=True)  # [B, C, C, 1]
-    s_target_energy = torch.sum(s_target ** 2, dim=3, keepdim=True) + EPS  # [B, 1, C, 1]
+    pair_wise_dot = torch.sum(s_estimate * s_target,
+                              dim=3, keepdim=True)  # [B, C, C, 1]
+    s_target_energy = torch.sum(
+        s_target ** 2, dim=3, keepdim=True) + EPS  # [B, 1, C, 1]
     pair_wise_proj = pair_wise_dot * s_target / s_target_energy  # [B, C, C, T]
     # print("pair_wise_dot.type()", pair_wise_dot.type(), "s_target_energy.type()", s_target_energy.type())
     # print("pair_wise_proj.type()", pair_wise_proj.type())
@@ -158,19 +177,20 @@ def cal_si_snr_with_pit(source, estimate_source, source_lengths):
     e_noise = s_estimate - pair_wise_proj  # [B, C, C, T]
     # print(e_noise.type())
     # SI-SNR = 10 * log_10(||s_target||^2 / ||e_noise||^2)
-    pair_wise_si_snr = torch.sum(pair_wise_proj ** 2, dim=3) / (torch.sum(e_noise ** 2, dim=3) + EPS)
-    pair_wise_si_snr = 10 * torch.log10(pair_wise_si_snr + EPS) # [B, C, C]
+    pair_wise_si_snr = torch.sum(
+        pair_wise_proj ** 2, dim=3) / (torch.sum(e_noise ** 2, dim=3) + EPS)
+    pair_wise_si_snr = 10 * torch.log10(pair_wise_si_snr + EPS)  # [B, C, C]
     # print("pair_wise_si_snr",pair_wise_si_snr.type())
 
-
     # Get max_snr of each utterance
-    # permutations, [C!, C] 
+    # permutations, [C!, C]
     perms = source.new_tensor(list(permutations(range(C))), dtype=torch.long)
     # one-hot, [C!, C, C]
     index = torch.unsqueeze(perms, 2)
     # print(index.type())
     # 如果不加.type(torch.float),perms-one-hot为long，在执行torch.einsum时会报错
-    perms_one_hot = source.new_zeros((*perms.size(), C)).scatter_(2, index, 1).type(torch.float)
+    perms_one_hot = source.new_zeros(
+        (*perms.size(), C)).scatter_(2, index, 1).type(torch.float)
     # print("perms_one_hot", perms_one_hot.type())
     # [B, C!] <- [B, C, C] einsum [C!, C, C], SI-SNR sum of each permutation
     snr_set = torch.einsum('bij,pij->bp', [pair_wise_si_snr, perms_one_hot])
@@ -217,9 +237,14 @@ def get_mask(source, source_lengths):
     B, _, T = source.size()
 
     mask = source.new_ones((B, 1, T))
+    # # ==============================================================================================
+    # print(type(source))
+    # print(type(source_lengths))
+    # print(source.size())
+    # # ==============================================================================================
 
     for i in range(B):
-        mask[i, :, source_lengths[i]:] = 0
+        mask[i, :, int(source_lengths[i]):] = 0
 
     return mask
 
@@ -237,7 +262,8 @@ if __name__ == "__main__":
     print('estimate_source', estimate_source)
     print('source_lengths', source_lengths)
 
-    loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_no(source, estimate_source, source_lengths)
+    loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_no(
+        source, estimate_source, source_lengths)
     print('loss', loss)
     print('max_snr', max_snr)
     print('reorder_estimate_source', reorder_estimate_source)

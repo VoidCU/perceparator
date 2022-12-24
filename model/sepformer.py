@@ -12,9 +12,9 @@ class Encoder(nn.Module):
 
         super(Encoder, self).__init__()
 
-        self.L = L  # 卷积核大小
+        self.L = L  # Convolution nucleus
 
-        self.N = N  # 输出通道大小
+        self.N = N  # Output channel size
 
         self.Conv1d = nn.Conv1d(in_channels=1,
                                 out_channels=N,
@@ -98,7 +98,10 @@ class TransformerEncoderLayer(Module):
 
         ln_z1 = self.LayerNorm1(z1)
 
-        z2 = self.self_attn(ln_z1, ln_z1, ln_z1, attn_mask=None, key_padding_mask=None)[0]
+        z2 = self.self_attn(ln_z1, ln_z1, ln_z1,
+                            attn_mask=None, key_padding_mask=None)[0]
+
+        print(z2.shape)
 
         z3 = self.FeedForward(self.LayerNorm2(z2 + z1)) + z2 + z1
 
@@ -119,7 +122,8 @@ class Positional_Encoding(nn.Module):
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model, requires_grad=False)
         position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model))
+        div_term = torch.exp(torch.arange(
+            0, d_model, 2).float() * -(math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
@@ -143,14 +147,16 @@ class DPTBlock(nn.Module):
 
         self.Local_B = Local_B
 
-        self.intra_PositionalEncoding = Positional_Encoding(d_model=input_size, max_len=5000)
+        self.intra_PositionalEncoding = Positional_Encoding(
+            d_model=input_size, max_len=5000)
         self.intra_transformer = nn.ModuleList([])
         for i in range(self.Local_B):
             self.intra_transformer.append(TransformerEncoderLayer(d_model=input_size,
                                                                   nhead=nHead,
                                                                   dropout=0))
 
-        self.inter_PositionalEncoding = Positional_Encoding(d_model=input_size, max_len=5000)
+        self.inter_PositionalEncoding = Positional_Encoding(
+            d_model=input_size, max_len=5000)
         self.inter_transformer = nn.ModuleList([])
         for i in range(self.Local_B):
             self.inter_transformer.append(TransformerEncoderLayer(d_model=input_size,
@@ -166,7 +172,8 @@ class DPTBlock(nn.Module):
         row_z1 = row_z + self.intra_PositionalEncoding(row_z)
 
         for i in range(self.Local_B):
-            row_z1 = self.intra_transformer[i](row_z1.permute(1, 0, 2)).permute(1, 0, 2)
+            row_z1 = self.intra_transformer[i](
+                row_z1.permute(1, 0, 2)).permute(1, 0, 2)
 
         row_f = row_z1 + row_z
         row_output = row_f.reshape(B, P, K, N).permute(0, 3, 2, 1)
@@ -176,7 +183,8 @@ class DPTBlock(nn.Module):
         col_z1 = col_z + self.inter_PositionalEncoding(col_z)
 
         for i in range(self.Local_B):
-            col_z1 = self.inter_transformer[i](col_z1.permute(1, 0, 2)).permute(1, 0, 2)
+            col_z1 = self.inter_transformer[i](
+                col_z1.permute(1, 0, 2)).permute(1, 0, 2)
 
         col_f = col_z1 + col_z
         col_output = col_f.reshape(B, K, P, N).permute(0, 3, 1, 2)
@@ -201,10 +209,12 @@ class Separator(nn.Module):
             self.DPT.append(DPTBlock(N, H, self.Local_B))
 
         self.LayerNorm = nn.LayerNorm(self.N)
-        self.Linear1 = nn.Linear(in_features=self.N, out_features=self.N, bias=None)
+        self.Linear1 = nn.Linear(
+            in_features=self.N, out_features=self.N, bias=None)
 
         self.PReLU = nn.PReLU()
-        self.Linear2 = nn.Linear(in_features=self.N, out_features=self.N*2, bias=None)
+        self.Linear2 = nn.Linear(
+            in_features=self.N, out_features=self.N*2, bias=None)
 
         self.FeedForward1 = nn.Sequential(nn.Linear(self.N, self.N*2*2),
                                           nn.ReLU(),
@@ -220,7 +230,8 @@ class Separator(nn.Module):
         x = self.Linear1(x).permute(0, 2, 1)
 
         # Chunking
-        out, gap = self.split_feature(x, self.K)  # 分块，[B, N, I] -> [B, N, K, S]
+        # 分块，[B, N, I] -> [B, N, K, S]
+        out, gap = self.split_feature(x, self.K)
 
         # SepFormer
         for i in range(self.Global_B):
@@ -233,7 +244,8 @@ class Separator(nn.Module):
         B, _, K, S = out.shape
 
         # OverlapAdd
-        out = out.reshape(B, -1, self.C, K, S).permute(0, 2, 1, 3, 4)  # [B, N*C, K, S] -> [B, N, C, K, S]
+        # [B, N*C, K, S] -> [B, N, C, K, S]
+        out = out.reshape(B, -1, self.C, K, S).permute(0, 2, 1, 3, 4)
         out = out.reshape(B * self.C, -1, K, S)
         out = self.merge_feature(out, gap)  # [B*C, N, K, S]  -> [B*C, N, I]
 
@@ -251,13 +263,16 @@ class Separator(nn.Module):
         batch_size, dim, seq_len = input.shape
         segment_stride = segment_size // 2
 
-        rest = segment_size - (segment_stride + seq_len % segment_size) % segment_size
+        rest = segment_size - (segment_stride + seq_len %
+                               segment_size) % segment_size
 
         if rest > 0:
-            pad = Variable(torch.zeros(batch_size, dim, rest)).type(input.type())
+            pad = Variable(torch.zeros(batch_size, dim, rest)
+                           ).type(input.type())
             input = torch.cat([input, pad], 2)
 
-        pad_aux = Variable(torch.zeros(batch_size, dim, segment_stride)).type(input.type())
+        pad_aux = Variable(torch.zeros(
+            batch_size, dim, segment_stride)).type(input.type())
 
         input = torch.cat([pad_aux, input, pad_aux], 2)
 
@@ -272,9 +287,12 @@ class Separator(nn.Module):
         batch_size, dim, seq_len = input.shape
         segment_stride = segment_size // 2
 
-        segments1 = input[:, :, :-segment_stride].contiguous().view(batch_size, dim, -1, segment_size)
-        segments2 = input[:, :, segment_stride:].contiguous().view(batch_size, dim, -1, segment_size)
-        segments = torch.cat([segments1, segments2], 3).view(batch_size, dim, -1, segment_size).transpose(2, 3)
+        segments1 = input[:, :, :-segment_stride].contiguous().view(batch_size,
+                                                                    dim, -1, segment_size)
+        segments2 = input[:, :, segment_stride:].contiguous().view(
+            batch_size, dim, -1, segment_size)
+        segments = torch.cat([segments1, segments2], 3).view(
+            batch_size, dim, -1, segment_size).transpose(2, 3)
 
         return segments.contiguous(), rest
 
@@ -285,10 +303,13 @@ class Separator(nn.Module):
 
         batch_size, dim, segment_size, _ = input.shape
         segment_stride = segment_size // 2
-        input = input.transpose(2, 3).contiguous().view(batch_size, dim, -1, segment_size * 2)  # B, N, K, L
+        input = input.transpose(2, 3).contiguous().view(
+            batch_size, dim, -1, segment_size * 2)  # B, N, K, L
 
-        input1 = input[:, :, :, :segment_size].contiguous().view(batch_size, dim, -1)[:, :, segment_stride:]
-        input2 = input[:, :, :, segment_size:].contiguous().view(batch_size, dim, -1)[:, :, :-segment_stride]
+        input1 = input[:, :, :, :segment_size].contiguous().view(
+            batch_size, dim, -1)[:, :, segment_stride:]
+        input2 = input[:, :, :, segment_size:].contiguous().view(
+            batch_size, dim, -1)[:, :, :-segment_stride]
 
         output = input1 + input2
 
@@ -313,50 +334,60 @@ class Sepformer(nn.Module):
 
         super(Sepformer, self).__init__()
 
-        self.N = N  # 编码器输出通道
-        self.C = C  # 分离源的数量
-        self.L = L  # 编码器卷积核大小
-        self.H = H  # 注意头数量
-        self.K = K  # 分块大小
-        self.Global_B = Global_B  # 全局循环次数
-        self.Local_B = Local_B  # 局部循环次数
+        self.N = N  # Code output channel
+        self.C = C  # The number of separation sources
+        self.L = L  # Coder convolution core size
+        self.H = H  # Pay attention to the number
+        self.K = K  # Block size
+        self.Global_B = Global_B  # Global cycle number
+        self.Local_B = Local_B  # Local cycle number
 
         self.encoder = Encoder(self.L, self.N)
 
-        self.separator = Separator(self.N, self.C, self.H, self.K, self.Global_B, self.Local_B)
+        self.separator = Separator(
+            self.N, self.C, self.H, self.K, self.Global_B, self.Local_B)
 
         self.decoder = Decoder(self.L, self.N)
 
     def forward(self, x):
 
         # Encoding
-        x, rest = self.pad_signal(x)  # 补零，torch.Size([1, 1, 32006])
+        # Make up for zero，torch.Size([1, 1, 32006])
+        # print(type(x))
+        x = x.unsqueeze(0)
+        x, rest = self.pad_signal(x)
 
-        enc_out = self.encoder(x)  # [B, 1, T] -> [B, N, I]，torch.Size([1, 64, 16002])
+        # [B, 1, T] -> [B, N, I]，torch.Size([1, 64, 16002])
+        enc_out = self.encoder(x)
 
         # Mask estimation
-        masks = self.separator(enc_out)  # [B, N, I] -> [B*C, N, I]，torch.Size([2, 64, 16002])
+        # [B, N, I] -> [B*C, N, I]，torch.Size([2, 64, 16002])
+        masks = self.separator(enc_out)
 
         _, N, I = masks.shape
 
-        masks = masks.view(self.C, -1, N, I)  # [C, B, N, I]，torch.Size([2, 1, 64, 16002])
+        # [C, B, N, I]，torch.Size([2, 1, 64, 16002])
+        masks = masks.view(self.C, -1, N, I)
 
         # Masking
-        out = [masks[i] * enc_out for i in range(self.C)]  # C * ([B, N, I]) * [B, N, I]
+        # C * ([B, N, I]) * [B, N, I]
+        out = [masks[i] * enc_out for i in range(self.C)]
 
         # Decoding
         audio = [self.decoder(out[i]) for i in range(self.C)]  # C * [B, 1, T]
 
-        audio[0] = audio[0][:, :, self.L // 2:-(rest + self.L // 2)].contiguous()  # B, 1, T
-        audio[1] = audio[1][:, :, self.L // 2:-(rest + self.L // 2)].contiguous()  # B, 1, T
+        audio[0] = audio[0][:, :, self.L // 2:-
+                            (rest + self.L // 2)].contiguous()  # B, 1, T
+        audio[1] = audio[1][:, :, self.L // 2:-
+                            (rest + self.L // 2)].contiguous()  # B, 1, T
         audio = torch.cat(audio, dim=1)  # [B, C, T]
 
         return audio
 
     def pad_signal(self, input):
 
-        # 输入波形: (B, T) or (B, 1, T)
-        # 调整和填充
+        # Enter waveform: (B, T) or (B, 1, T)
+        # Adjust and fill
 
         if input.dim() not in [2, 3]:
             raise RuntimeError("Input can only be 2 or 3 dimensional.")
@@ -364,15 +395,16 @@ class Sepformer(nn.Module):
         if input.dim() == 2:
             input = input.unsqueeze(1)
 
-        batch_size = input.size(0)  # 每一个批次的大小
-        nsample = input.size(2)  # 单个数据的长度
+        batch_size = input.size(0)  # The size of each batch
+        nsample = input.size(2)  # The length of a single data
         rest = self.L - (self.L // 2 + nsample % self.L) % self.L
 
         if rest > 0:
             pad = Variable(torch.zeros(batch_size, 1, rest)).type(input.type())
             input = torch.cat([input, pad], dim=2)
 
-        pad_aux = Variable(torch.zeros(batch_size, 1, self.L // 2)).type(input.type())
+        pad_aux = Variable(torch.zeros(
+            batch_size, 1, self.L // 2)).type(input.type())
 
         input = torch.cat([pad_aux, input, pad_aux], 2)
 
@@ -432,7 +464,8 @@ if __name__ == "__main__":
                       Global_B=2,
                       Local_B=8)
 
-    print("{:.3f} million".format(sum([param.nelement() for param in model.parameters()]) / 1e6))
+    print("{:.3f} million".format(
+        sum([param.nelement() for param in model.parameters()]) / 1e6))
 
     y = model(x)
 

@@ -24,7 +24,9 @@ def preprocess_one_dir(in_dir, out_dir, out_filename, sample_rate=8000):
 
 def preprocess(args):
     for data_type in ['tr', 'cv', 'tt']:
+        print('a')
         for speaker in ['mix', 's1', 's2']:
+            print('b')
             preprocess_one_dir(os.path.join(args.in_dir, data_type, speaker),  # 拼接路径
                                os.path.join(args.out_dir, data_type),
                                speaker,
@@ -37,12 +39,12 @@ if __name__ == "__main__":
 
     parser.add_argument('--in-dir',
                         type=str,
-                        default="./min",
+                        default="./dataset/min",
                         help='Directory path of wsj0 including tr, cv and tt')
 
     parser.add_argument('--out-dir',
                         type=str,
-                        default="./json/",
+                        default="./dataset/json/",
                         help='Directory path to put output files')
 
     parser.add_argument('--sample-rate',

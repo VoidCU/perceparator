@@ -3,16 +3,16 @@
 
   "train_dataset":
   {
-    "train_dir": "./dataset/json/tr",
-    "batch_size": 1,
+    "train_dir": "./dataset/min/tr",
+    "batch_size": 100,
     "sample_rate": 8000,
     "segment": -1,
   },
 
   "validation_dataset":
   {
-    "validation_dir": "./dataset/json/cv",
-    "batch_size": 1,
+    "validation_dir": "./dataset/min/cv",
+    "batch_size": 100,
     "sample_rate": 8000,
     "segment": -1,
     "cv_max_len": 8,
@@ -20,14 +20,14 @@
 
   "train_loader":
   {
-   "batch_size": 1,
+   "batch_size": 100,
    "shuffle": true,
    "num_workers": 0,
   },
 
   "validation_loader":
   {
-    "batch_size": 1,
+    "batch_size": 100,
     "shuffle": true,
     "num_workers": 0,
   },
@@ -38,11 +38,11 @@
 
     "sepformer":
     {
-      "N": 256,
+      "N": 128,
       "C": 2,
-      "L": 16,
-      "H": 8,
-      "K": 250,
+      "L": 64,
+      "H": 4,
+      "K": 150,
       "Global_B": 2,
       "Local_B": 8,
     },
@@ -50,7 +50,7 @@
 
   "train":
   {
-    "use_cuda": false,
+    "use_cuda": true,
     "epochs": 100,
     "half_lr": true,
     "early_stop": true,
