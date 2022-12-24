@@ -16,6 +16,7 @@ import time
 
 # hey its me
 # heyy
+# please
 def main(config):
 
     if config["mix_dir"] is None and config["mix_json"] is None:
