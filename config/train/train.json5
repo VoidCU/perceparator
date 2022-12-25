@@ -1,106 +1,92 @@
 {
-  "seed": 0,
+  seed: 0,
 
-  "train_dataset":
-  {
-    "train_dir": "./dataset/min/tr",
-    "batch_size": 100,
-    "sample_rate": 8000,
-    "segment": -1,
+  train_dataset: {
+    train_dir: "./dataset/min/tr",
+    batch_size: 10,
+    sample_rate: 8000,
+    segment: -1,
   },
 
-  "validation_dataset":
-  {
-    "validation_dir": "./dataset/min/cv",
-    "batch_size": 100,
-    "sample_rate": 8000,
-    "segment": -1,
-    "cv_max_len": 8,
+  validation_dataset: {
+    validation_dir: "./dataset/min/cv",
+    batch_size: 10,
+    sample_rate: 8000,
+    segment: -1,
+    cv_max_len: 8,
   },
 
-  "train_loader":
-  {
-   "batch_size": 100,
-   "shuffle": true,
-   "num_workers": 0,
+  train_loader: {
+    batch_size: 10,
+    shuffle: true,
+    num_workers: 0,
   },
 
-  "validation_loader":
-  {
-    "batch_size": 100,
-    "shuffle": true,
-    "num_workers": 0,
+  validation_loader: {
+    batch_size: 10,
+    shuffle: true,
+    num_workers: 0,
   },
 
-  "model":
-  {
-    "type": "perceparator",
+  model: {
+    type: "perceparator",
 
-    "perceparator":
-    {
-      "N": 128,
-      "C": 2,
-      "L": 64,
-      "H": 4,
-      "K": 150,
-      "Overall_LC": 16,
+    perceparator: {
+      N: 256,
+      C: 2,
+      L: 2,
+      H: 8,
+      K: 250,
+      Overall_LC: 16,
     },
   },
 
-  "train":
-  {
-    "use_cuda": true,
-    "epochs": 100,
-    "half_lr": true,
-    "early_stop": true,
-    "max_norm": 5,
+  train: {
+    use_cuda: true,
+    epochs: 100,
+    half_lr: true,
+    early_stop: true,
+    max_norm: 5,
   },
 
-  "optimizer":
-  {
-    "type": "adamp",
+  optimizer: {
+    type: "adamp",
 
-    "sgd":
-    {
-      "lr": 0.125,
-      "momentum": 0.0,
-      "l2": 0.0,
+    sgd: {
+      lr: 0.125,
+      momentum: 0.0,
+      l2: 0.0,
     },
 
-    "adam":
-    {
-      "lr": 0.0125,
-      "beta1": 0.9,
-      "beta2": 0.999
+    adam: {
+      lr: 0.0125,
+      beta1: 0.9,
+      beta2: 0.999,
     },
 
-    "sgdp":
-    {
-      "lr":0.1,
-      "weight_decay":1e-5,
-      "momentum":0.9,
-      "nesterov":true
+    sgdp: {
+      lr: 0.1,
+      weight_decay: 1e-5,
+      momentum: 0.9,
+      nesterov: true,
     },
 
-    "adamp":
-    {
-      "lr":0.001,
-      "beta1":0.9,
-      "beta2":0.999,
-      "weight_decay":1e-2,
-    }
+    adamp: {
+      lr: 0.001,
+      beta1: 0.9,
+      beta2: 0.999,
+      weight_decay: 1e-2,
+    },
   },
 
-  "save_load":
-  {
-    "save_folder": "./checkpoint/",
-    "checkpoint": true,
-    "continue_from": "",
-    "model_path": "final.path.tar",
+  save_load: {
+    save_folder: "./checkpoint/",
+    checkpoint: true,
+    continue_from: "",
+    model_path: "final.path.tar",
   },
 
-  "logging":
-  {
-    "print_freq": 1,
-  }
+  logging: {
+    print_freq: 1,
+  },
 }

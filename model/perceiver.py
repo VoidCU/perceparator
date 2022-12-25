@@ -130,7 +130,6 @@ class PerceiverBlock(nn.Module):
         l = self.cross_attention(x, l)
 
         l = self.latent_transformer(l)
-
         return l
 
 
@@ -189,12 +188,12 @@ class Perceiver(nn.Module):
 
     def forward(self, x, latent):
         x = self.embed(x)
-        #output = latent
+        # output = latent
 
         for pb in self.perceiver_blocks:
             latent = pb(x, latent)
-            #output += latent
-
+            # output += latent
+        print(latent.size())
         return latent
 
 
@@ -241,7 +240,6 @@ class Separator(nn.Module):
             dropout=0,
             trnfr_layers=self.trnfr_layers,
             n_blocks=self.Overall_LC,
-
         )
 
         self.LayerNorm = nn.LayerNorm(self.input_shape)
@@ -281,22 +279,20 @@ class Separator(nn.Module):
         # Perceiver
         B, N, K, P = out.shape
         out = out.permute(0, 3, 2, 1).reshape(B * P, K, N)
-
         latent = self.latent.expand(-1, P, -1)
 
         out = self.perceiver(out.permute(1, 0, 2), latent).permute(1, 0, 2)
 
-        out = out.reshape(1, 256, 16, 66)
+        out = out.reshape(1, 256, 16, P)
 
-        #Geetting out the original size from latent array
+        # Geetting out the original size from latent array
 
-        out = self.LinearLatent1(out.permute(0,1,3,2).reshape(1*256*66, 16))
-        out = self.LinearLatent2(out).reshape(1,256, 66, 250).permute(0,1,3,2)
+        out = self.LinearLatent1(out.permute(0, 1, 3, 2).reshape(1 * 256 * P, 16))
+        out = self.LinearLatent2(out).reshape(1, 256, P, 250).permute(0, 1, 3, 2)
 
         # PReLU + Linear
         out = self.PReLU(out)
         out = self.Linear2(out.permute(0, 3, 2, 1)).permute(0, 3, 2, 1)
-
         B, _, K, S = out.shape
 
         # OverlapAdd
@@ -304,14 +300,10 @@ class Separator(nn.Module):
         out = out.reshape(B, -1, self.C, K, S).permute(0, 2, 1, 3, 4)
         out = out.reshape(B * self.C, -1, K, S)
         out = self.merge_feature(out, gap)  # [B*C, N, K, S]  -> [B*C, N, I]
-
         # FFW + ReLU
         out = self.FeedForward1(out.permute(0, 2, 1))
         out = self.FeedForward2(out).permute(0, 2, 1)
         out = self.ReLU(out)
-
-
-
 
         return out
 
@@ -423,7 +415,7 @@ class Perceparator(nn.Module):
         self.trnfr_heads = H  # Pay attention to the number
         self.trnfr_layers = 6
         self.K = K  # Block size
-        self.Overall_LC = Overall_LC #overall loop cycle of perceiver
+        self.Overall_LC = Overall_LC  # overall loop cycle of perceiver
 
         self.encoder = Encoder(self.L, self.N)
 
@@ -437,7 +429,7 @@ class Perceparator(nn.Module):
             self.trnfr_heads,
             self.trnfr_layers,
             self.K,
-            self.Overall_LC
+            self.Overall_LC,
         )
 
         self.decoder = Decoder(self.L, self.N)
@@ -535,10 +527,10 @@ class Perceparator(nn.Module):
             "N": model.N,
             "C": model.C,
             "L": model.L,
-            "H": model.H,
+            "H": model.trnfr_heads,
             "K": model.K,
-            "Global_B": model.Global_B,
-            "Local_B": model.Local_B,
+            # "Global_B": model.Global_B,
+            # "Local_B": model.Local_B,
             # state
             "state_dict": model.state_dict(),
             "optim_dict": optimizer.state_dict(),
@@ -562,7 +554,7 @@ if __name__ == "__main__":
         L=2,  # length of filters
         H=8,  # number of multihead atten
         K=250,  # chunk length
-        Overall_LC = 16 #no of times the perceiver is looped
+        Overall_LC=16,  # no of times the perceiver is looped
     )
 
     print(

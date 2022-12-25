@@ -35,31 +35,44 @@ def main(config):
     #                             num_workers=config["validation_loader"]["num_workers"])
 
     # Modified by US(Thapathalians)
-    tr_dataset = MyDataset(config["train_dataset"]["train_dir"], config["train_dataset"]["batch_size"], 
-                            config["train_dataset"]["sample_rate"], config["train_dataset"]["segment"])
-    cv_dataset = MyDataset(config["validation_dataset"]["validation_dir"], config["validation_dataset"]["batch_size"],
-                           config["validation_dataset"]["sample_rate"], config["validation_dataset"]["segment"])
+    tr_dataset = MyDataset(
+        config["train_dataset"]["train_dir"],
+        config["train_dataset"]["batch_size"],
+        config["train_dataset"]["sample_rate"],
+        config["train_dataset"]["segment"],
+    )
+    cv_dataset = MyDataset(
+        config["validation_dataset"]["validation_dir"],
+        config["validation_dataset"]["batch_size"],
+        config["validation_dataset"]["sample_rate"],
+        config["validation_dataset"]["segment"],
+    )
 
-    tr_loader = DataLoader(tr_dataset,
-                           batch_size=config["train_loader"]["batch_size"],
-                           shuffle=config["train_loader"]["shuffle"],
-                           num_workers=config["train_loader"]["num_workers"])
+    tr_loader = DataLoader(
+        tr_dataset,
+        batch_size=config["train_loader"]["batch_size"],
+        shuffle=config["train_loader"]["shuffle"],
+        num_workers=config["train_loader"]["num_workers"],
+    )
 
-    cv_loader = DataLoader(cv_dataset,
-                           batch_size=config["validation_loader"]["batch_size"],
-                           shuffle=config["validation_loader"]["shuffle"],
-                           num_workers=config["validation_loader"]["num_workers"])
+    cv_loader = DataLoader(
+        cv_dataset,
+        batch_size=config["validation_loader"]["batch_size"],
+        shuffle=config["validation_loader"]["shuffle"],
+        num_workers=config["validation_loader"]["num_workers"],
+    )
 
     data = {"tr_loader": tr_loader, "cv_loader": cv_loader}
-
     # Model
     if config["model"]["type"] == "perceparator":
-        model = Perceparator(N=config["model"]["perceparator"]["N"],
-                          C=config["model"]["perceparator"]["C"],
-                          L=config["model"]["perceparator"]["L"],
-                          H=config["model"]["perceparator"]["H"],
-                          K=config["model"]["perceparator"]["K"],
-                          Overall_LC= config["model"]["perceparator"]["Overall_LC"])
+        model = Perceparator(
+            N=config["model"]["perceparator"]["N"],
+            C=config["model"]["perceparator"]["C"],
+            L=config["model"]["perceparator"]["L"],
+            H=config["model"]["perceparator"]["H"],
+            K=config["model"]["perceparator"]["K"],
+            Overall_LC=config["model"]["perceparator"]["Overall_LC"],
+        )
     else:
         print("No loaded model!")
 
@@ -72,12 +85,17 @@ def main(config):
             params=model.parameters(),
             lr=config["optimizer"]["sgd"]["lr"],
             momentum=config["optimizer"]["sgd"]["momentum"],
-            weight_decay=config["optimizer"]["sgd"]["l2"])
+            weight_decay=config["optimizer"]["sgd"]["l2"],
+        )
     elif config["optimizer"]["type"] == "adam":
         optimize = torch.optim.Adam(
             params=model.parameters(),
             lr=config["optimizer"]["adam"]["lr"],
-            betas=(config["optimizer"]["adam"]["beta1"], config["optimizer"]["adam"]["beta2"]))
+            betas=(
+                config["optimizer"]["adam"]["beta1"],
+                config["optimizer"]["adam"]["beta2"],
+            ),
+        )
     elif config["optimizer"]["type"] == "sgdp":
         optimize = SGDP(
             params=model.parameters(),
@@ -90,8 +108,10 @@ def main(config):
         optimize = AdamP(
             params=model.parameters(),
             lr=config["optimizer"]["adamp"]["lr"],
-            betas=(config["optimizer"]["adamp"]["beta1"],
-                   config["optimizer"]["adamp"]["beta2"]),
+            betas=(
+                config["optimizer"]["adamp"]["beta1"],
+                config["optimizer"]["adamp"]["beta2"],
+            ),
             weight_decay=config["optimizer"]["adamp"]["weight_decay"],
         )
     else:
@@ -103,7 +123,7 @@ def main(config):
     trainer.train()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     path = r"config/train/train.json5"
     with open(path) as f:
         configuration = json5.load(f)

@@ -4,6 +4,7 @@ import torch.nn as nn
 from einops import rearrange, repeat
 from model.position import RotaryPositionEmbedding
 
+
 class MultiHeadAttention(nn.Module):
     def __init__(
         self,
@@ -51,7 +52,7 @@ class MultiHeadAttention(nn.Module):
 
         num_qk_channels_per_head = num_qk_channels // num_heads
 
-        self.dp_scale = num_qk_channels_per_head ** -0.5
+        self.dp_scale = num_qk_channels_per_head**-0.5
         self.num_heads = num_heads
         self.causal_attention = causal_attention
 
@@ -85,7 +86,9 @@ class MultiHeadAttention(nn.Module):
         k = self.k_proj(x_kv)
         v = self.v_proj(x_kv)
 
-        q, k, v = (rearrange(x, "b n (h c) -> b h n c", h=self.num_heads) for x in [q, k, v])
+        q, k, v = (
+            rearrange(x, "b n (h c) -> b h n c", h=self.num_heads) for x in [q, k, v]
+        )
         q = q * self.dp_scale
 
         if rot_pos_emb_q is not None:
@@ -106,7 +109,9 @@ class MultiHeadAttention(nn.Module):
             j = k.shape[2]
 
             # If q and k have different length, causal masking only works if they are right-aligned.
-            causal_mask = torch.ones((i, j), device=x_q.device, dtype=torch.bool).triu(j - i + 1)
+            causal_mask = torch.ones((i, j), device=x_q.device, dtype=torch.bool).triu(
+                j - i + 1
+            )
             attn.masked_fill_(causal_mask, attn_max_neg)
 
         attn = attn.softmax(dim=-1)
@@ -147,7 +152,15 @@ class CrossAttention(nn.Module):
             out_bias=out_bias,
         )
 
-    def forward(self, x_q, x_kv=None, x_kv_prefix=None, pad_mask=None, rot_pos_emb_q=None, rot_pos_emb_k=None):
+    def forward(
+        self,
+        x_q,
+        x_kv=None,
+        x_kv_prefix=None,
+        pad_mask=None,
+        rot_pos_emb_q=None,
+        rot_pos_emb_k=None,
+    ):
         """Pre-layer-norm cross-attention of query input `x_q` to key/value input (`x_kv` or `x_kv_prefix`).
         If `x_kv_prefix` is defined, the entire key/value input is a concatenation of `x_kv_prefix` and `x_q` along
         the sequence dimension. In this case, the query attends to itself at the end of the key/value sequence (use
@@ -161,7 +174,13 @@ class CrossAttention(nn.Module):
         else:
             x_kv = self.kv_norm(x_kv)
 
-        return self.attention(x_q, x_kv, pad_mask=pad_mask, rot_pos_emb_q=rot_pos_emb_q, rot_pos_emb_k=rot_pos_emb_k)
+        return self.attention(
+            x_q,
+            x_kv,
+            pad_mask=pad_mask,
+            rot_pos_emb_q=rot_pos_emb_q,
+            rot_pos_emb_k=rot_pos_emb_k,
+        )
 
 
 class SelfAttention(nn.Module):
@@ -194,4 +213,10 @@ class SelfAttention(nn.Module):
     def forward(self, x, pad_mask=None, rot_pos_emb=None):
         """Pre-layer-norm self-attention of input `x`."""
         x = self.norm(x)
-        return self.attention(x, x, pad_mask=pad_mask, rot_pos_emb_q=rot_pos_emb, rot_pos_emb_k=rot_pos_emb)
+        return self.attention(
+            x,
+            x,
+            pad_mask=pad_mask,
+            rot_pos_emb_q=rot_pos_emb,
+            rot_pos_emb_k=rot_pos_emb,
+        )

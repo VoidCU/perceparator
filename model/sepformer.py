@@ -181,9 +181,6 @@ class DPTBlock(nn.Module):
         print(f"row final :{row_z1.size()}")
         for i in range(self.Local_B):
             row_z1 = self.intra_transformer[i](row_z1.permute(1, 0, 2)).permute(1, 0, 2)
-        print("hello")
-        print(f"row_z1rs {row_z1.size()} row_z{row_z.size()}")
-        exit()
         row_f = row_z1 + row_z
         row_output = row_f.reshape(B, P, K, N).permute(0, 3, 2, 1)
 
