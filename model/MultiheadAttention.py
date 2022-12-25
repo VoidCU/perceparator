@@ -2,7 +2,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from einops import rearrange, repeat
-from position import RotaryPositionEmbedding
+from model.position import RotaryPositionEmbedding
 
 class MultiHeadAttention(nn.Module):
     def __init__(

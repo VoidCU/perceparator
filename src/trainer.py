@@ -15,19 +15,19 @@ class Trainer(object):
         self.optimizer = optimizer
 
         # Training config
-        self.use_cuda = config["train"]["use_cuda"]  # 是否使用 GPU
-        self.epochs = config["train"]["epochs"]  # 训练批次
-        # Whether to adjust the learning rate
+        self.use_cuda = config["train"]["use_cuda"]  # use or not GPU
+        self.epochs = config["train"]["epochs"]  # Training batches
+        #WHETHER to Adjust The Learning Rate
         self.half_lr = config["train"]["half_lr"]
-        self.early_stop = config["train"]["early_stop"]  # 是否早停
-        self.max_norm = config["train"]["max_norm"]  # L2 范数
+        self.early_stop = config["train"]["early_stop"]  # Whether to stop early
+        self.max_norm = config["train"]["max_norm"]  # L2 Sample
 
         # save and load model
-        self.save_folder = config["save_load"]["save_folder"]  # 模型保存路径
-        self.checkpoint = config["save_load"]["checkpoint"]  # 是否保存每一个训练模型
+        self.save_folder = config["save_load"]["save_folder"]  # Model preservation path
+        self.checkpoint = config["save_load"]["checkpoint"]  # Whether to save each training model
         # Whether the original training progress is carried out
         self.continue_from = config["save_load"]["continue_from"]
-        self.model_path = config["save_load"]["model_path"]  # 模型保存格式
+        self.model_path = config["save_load"]["model_path"]  # Model preservation format
 
         # logging
         self.print_freq = config["logging"]["print_freq"]
@@ -43,7 +43,7 @@ class Trainer(object):
         self.halving = False
         self.val_no_improve = 0
 
-        # 可视化
+        # Visualization
         self.write = SummaryWriter("./logs")
 
         self._reset()
@@ -52,7 +52,7 @@ class Trainer(object):
 
     def _reset(self):
         if self.continue_from:
-            # 接着原来进度训练
+            # Then the original progress training
             print('Loading checkpoint model %s' % self.continue_from)
             package = torch.load(self.save_folder + self.continue_from)
 
@@ -67,7 +67,7 @@ class Trainer(object):
             self.tr_loss[:self.start_epoch] = package['tr_loss'][:self.start_epoch]
             self.cv_loss[:self.start_epoch] = package['cv_loss'][:self.start_epoch]
         else:
-            # 重新训练
+            # Re -training
             self.start_epoch = 0
 
     def train(self):
@@ -85,8 +85,8 @@ class Trainer(object):
 
             self.write.add_scalar("train loss", tr_loss, epoch+1)
 
-            end_time = time.time()  # 训练结束时间
-            run_time = end_time - start_time  # 训练时间
+            end_time = time.time()  # Time of training
+            run_time = end_time - start_time  # Training time
 
             print('-' * 85)
             print('End of Epoch {0} | Time {1:.2f}s | Train Loss {2:.3f}'.format(
@@ -94,7 +94,7 @@ class Trainer(object):
             print('-' * 85)
 
             if self.checkpoint:
-                # 保存每一个训练模型
+                # Save each training model
                 file_path = os.path.join(
                     self.save_folder, 'epoch%d.pth.tar' % (epoch + 1))
 
@@ -115,15 +115,15 @@ class Trainer(object):
             torch.cuda.empty_cache()
             self.model.eval()  # Set the model as the verification mode
 
-            start_time = time.time()  # 验证开始时间
+            start_time = time.time()  # Verification start time
 
             val_loss = self._run_one_epoch(
                 epoch, cross_valid=True)  # Verification model
 
             self.write.add_scalar("validation loss", val_loss, epoch+1)
 
-            end_time = time.time()  # 验证结束时间
-            run_time = end_time - start_time  # 训练时间
+            end_time = time.time()  # Verification end time
+            run_time = end_time - start_time  # Training time
 
             print('-' * 85)
             print('End of Epoch {0} | Time {1:.2f}s | ''Valid Loss {2:.3f}'.format(
@@ -194,7 +194,7 @@ class Trainer(object):
             padded_source = torch.tensor(padded_source, dtype=torch.float32)
             gc.collect()
             torch.cuda.empty_cache()
-            # 是否使用 GPU 训练
+            # use or not GPU train
             # if torch.cuda.is_available():
             #     padded_mixture = padded_mixture.cuda()
             #     mixture_lengths = mixture_lengths.cuda()
@@ -204,7 +204,7 @@ class Trainer(object):
             # estimate_source = self.model(milking)
             # print(torch.cuda.max_memory_allocated())
 
-            estimate_source = self.model(padded_mixture)  # 将数据放入模型
+            estimate_source = self.model(padded_mixture)  # Put the data in the model
             loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_pit(padded_source,
                                                                                    estimate_source,
                                                                                    mixture_lengths)

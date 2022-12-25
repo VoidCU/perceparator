@@ -2,6 +2,7 @@ from adamp import AdamP, SGDP
 import numpy as np
 import json5
 from model.sepformer import Sepformer
+from model.perceiver import Perceparator
 from src.trainer import Trainer
 from dataset.data import DataLoader, MyDataset
 import torch
@@ -34,8 +35,8 @@ def main(config):
     #                             num_workers=config["validation_loader"]["num_workers"])
 
     # Modified by US(Thapathalians)
-    tr_dataset = MyDataset(
-        config["train_dataset"]["train_dir"], config["train_dataset"]["batch_size"], config["train_dataset"]["sample_rate"], config["train_dataset"]["segment"])
+    tr_dataset = MyDataset(config["train_dataset"]["train_dir"], config["train_dataset"]["batch_size"], 
+                            config["train_dataset"]["sample_rate"], config["train_dataset"]["segment"])
     cv_dataset = MyDataset(config["validation_dataset"]["validation_dir"], config["validation_dataset"]["batch_size"],
                            config["validation_dataset"]["sample_rate"], config["validation_dataset"]["segment"])
 
@@ -51,15 +52,14 @@ def main(config):
 
     data = {"tr_loader": tr_loader, "cv_loader": cv_loader}
 
-    # 模型
-    if config["model"]["type"] == "sepformer":
-        model = Sepformer(N=config["model"]["sepformer"]["N"],
-                          C=config["model"]["sepformer"]["C"],
-                          L=config["model"]["sepformer"]["L"],
-                          H=config["model"]["sepformer"]["H"],
-                          K=config["model"]["sepformer"]["K"],
-                          Global_B=config["model"]["sepformer"]["Global_B"],
-                          Local_B=config["model"]["sepformer"]["Local_B"])
+    # Model
+    if config["model"]["type"] == "perceparator":
+        model = Perceparator(N=config["model"]["perceparator"]["N"],
+                          C=config["model"]["perceparator"]["C"],
+                          L=config["model"]["perceparator"]["L"],
+                          H=config["model"]["perceparator"]["H"],
+                          K=config["model"]["perceparator"]["K"],
+                          Overall_LC= config["model"]["perceparator"]["Overall_LC"])
     else:
         print("No loaded model!")
 

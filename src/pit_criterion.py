@@ -95,7 +95,7 @@ def cal_si_snr(source, estimate_source, source_lengths):
     # one-hot, [C!, C, C]
     index = torch.unsqueeze(perms, 2)
     # print(index.type())
-    # 如果不加.type(torch.float),perms-one-hot为long，在执行torch.einsum时会报错
+    # If you do not add.type(torch.float),perms-one-hot为long，Executetorch.einsum, will report an error time
     perms_one_hot = torch.unsqueeze(perms, dim=0).type(torch.float)
     # print("perms_one_hot", perms_one_hot.type())
     # [B, C!] <- [B, C, C] einsum [C!, C, C], SI-SNR sum of each permutation
@@ -188,7 +188,7 @@ def cal_si_snr_with_pit(source, estimate_source, source_lengths):
     # one-hot, [C!, C, C]
     index = torch.unsqueeze(perms, 2)
     # print(index.type())
-    # 如果不加.type(torch.float),perms-one-hot为long，在执行torch.einsum时会报错
+    # If you do not add.type(torch.float),perms-one-hot for long，Execute torch.einsum, will report an error time
     perms_one_hot = source.new_zeros(
         (*perms.size(), C)).scatter_(2, index, 1).type(torch.float)
     # print("perms_one_hot", perms_one_hot.type())

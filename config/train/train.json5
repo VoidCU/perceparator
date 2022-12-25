@@ -34,17 +34,16 @@
 
   "model":
   {
-    "type": "sepformer",
+    "type": "perceparator",
 
-    "sepformer":
+    "perceparator":
     {
       "N": 128,
       "C": 2,
       "L": 64,
       "H": 4,
       "K": 150,
-      "Global_B": 2,
-      "Local_B": 8,
+      "Overall_LC": 16,
     },
   },
 
