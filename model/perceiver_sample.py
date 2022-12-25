@@ -1,10 +1,7 @@
 import torch
 import torch.nn as nn
 from MultiheadAttention import MultiHeadAttention
-from torch.nn.modules.module import Module
 from torch.autograd import Variable
-import math
-import numpy as np
 from positional_encodings.torch_encodings import PositionalEncoding1D
 
 
@@ -164,7 +161,6 @@ class Perceiver(nn.Module):
     def __init__(
         self,
         input_shape,
-        latent_dim,
         embed_dim,
         attn_mlp_dim,
         trnfr_mlp_dim,
@@ -193,82 +189,13 @@ class Perceiver(nn.Module):
 
     def forward(self, x, latent):
         x = self.embed(x)
+        #output = latent
 
         for pb in self.perceiver_blocks:
             latent = pb(x, latent)
+            #output += latent
 
         return latent
-
-
-class DPTBlock(nn.Module):
-    def __init__(
-        self,
-        input_shape,
-        latent_dim,
-        embed_dim,
-        attn_mlp_dim,
-        trnfr_mlp_dim,
-        trnfr_heads,
-        dropout,
-        trnfr_layers,
-        n_blocks,
-    ):
-
-        super(DPTBlock, self).__init__()
-
-        self.latent = nn.parameter.Parameter(
-            torch.nn.init.trunc_normal_(
-                torch.zeros((latent_dim, 1, embed_dim)), mean=0, std=0.02, a=-2, b=2
-            )
-        )
-
-        self.intra_transformer = Perceiver(
-            input_shape=(250, 66),
-            latent_dim=latent_dim,
-            embed_dim=embed_dim,
-            attn_mlp_dim=attn_mlp_dim,
-            trnfr_mlp_dim=trnfr_mlp_dim,
-            trnfr_heads=trnfr_heads,
-            dropout=dropout,
-            trnfr_layers=trnfr_layers,
-            n_blocks=n_blocks,
-        )
-
-        self.inter_transformer = Perceiver(
-            input_shape=(250, 66),
-            latent_dim=latent_dim,
-            embed_dim=embed_dim,
-            attn_mlp_dim=attn_mlp_dim,
-            trnfr_mlp_dim=trnfr_mlp_dim,
-            trnfr_heads=trnfr_heads,
-            dropout=dropout,
-            trnfr_layers=trnfr_layers,
-            n_blocks=n_blocks,
-        )
-
-    def forward(self, z):
-
-        B, N, K, P = z.shape  # torch.Size([1, 256, 250, 66])
-
-        batch_size = z.shape[3]
-        latent = self.latent.expand(-1, batch_size, -1)
-        # intra DPT
-        row_z = z.permute(0, 3, 2, 1).reshape(B * P, K, N)  # torch.size([66,250,256])
-        # B ->batch size ,P->no of chunks , K ->chunk length , N-> no of channel
-        # latent torch.size([16,250,256])
-        row_z = self.intra_transformer(row_z.permute(1, 0, 2), latent).permute(1, 0, 2)
-        # exit()
-        # row_output = z.reshape(B, P, K, N).permute(0, 3, 2, 1)
-        # inter DPT
-        # col_z = row_output.permute(0, 2, 3, 1).reshape(B * K, P, N)
-        # col_z = self.inter_transformer(col_z.permute(1, 0, 2), row_z).permute(1, 0, 2)
-        # col_output = col_z
-        # print(f" col out latent:  {col_output.size()}")
-
-        row_z = row_z.unsqueeze(0)
-        print(f"{row_z.size()} ullala")
-        exit()
-        return row_z
 
 
 class Separator(nn.Module):
@@ -283,8 +210,7 @@ class Separator(nn.Module):
         trnfr_heads,
         trnfr_layers,
         K,
-        Global_B,
-        Local_B,
+        Overall_LC,
     ):
 
         super(Separator, self).__init__()
@@ -298,29 +224,32 @@ class Separator(nn.Module):
         self.trnfr_heads = trnfr_heads
         self.trnfr_layers = trnfr_layers
         self.K = K
-        self.Global_B = Global_B  # Arcellar cycle
-        self.Local_B = Local_B  # Plopenclastic number of cycles
+        self.Overall_LC = Overall_LC
 
-        self.DPT = nn.ModuleList([])
-        for i in range(self.Global_B):
-            self.DPT.append(
-                DPTBlock(
-                    input_shape=self.input_shape,
-                    latent_dim=self.latent_dim,
-                    embed_dim=self.embed_dim,
-                    attn_mlp_dim=self.attn_mlp_dim,
-                    trnfr_mlp_dim=self.trnfr_mlp_dim,
-                    trnfr_heads=self.trnfr_heads,
-                    dropout=0,
-                    trnfr_layers=self.trnfr_layers,
-                    n_blocks=self.Local_B,
-                )
+        self.latent = nn.parameter.Parameter(
+            torch.nn.init.trunc_normal_(
+                torch.zeros((latent_dim, 1, embed_dim)), mean=0, std=0.02, a=-2, b=2
             )
+        )
+
+        self.perceiver = Perceiver(
+            input_shape=(250, 66),
+            embed_dim=self.embed_dim,
+            attn_mlp_dim=self.attn_mlp_dim,
+            trnfr_mlp_dim=self.trnfr_mlp_dim,
+            trnfr_heads=self.trnfr_heads,
+            dropout=0,
+            trnfr_layers=self.trnfr_layers,
+            n_blocks=self.Overall_LC,
+
+        )
 
         self.LayerNorm = nn.LayerNorm(self.input_shape)
         self.Linear1 = nn.Linear(
             in_features=self.input_shape, out_features=self.input_shape, bias=False
         )
+
+        self.LinearLatent = nn.Linear(16, 250)
 
         self.PReLU = nn.PReLU()
         self.Linear2 = nn.Linear(
@@ -347,19 +276,31 @@ class Separator(nn.Module):
         # Chunking
         # Block，[B, N, I] -> [B, N, K, S]
         out, gap = self.split_feature(x, self.K)
+
         # Perceiver
-        for i in range(self.Global_B):
-            self.input_shape = out.shape
-            out = self.DPT[i](out)  # [B, N, K, S] -> [B, N, K, S]
+        B, N, K, P = out.shape
+        out = out.permute(0, 3, 2, 1).reshape(B * P, K, N)
+
+        latent = self.latent.expand(-1, P, -1)
+
+        out = self.perceiver(out.permute(1, 0, 2), latent).permute(1, 0, 2)
+
+        out = out.reshape(1, 256, 16, 66)
+
+        #Geetting out the original size from latent array
+
+        out = self.LinearLatent(out.permute(0,1,3,2).reshape(1*256*66, 16)).reshape(1,256, 66, 250).permute(0,1,3,2)
 
         # PReLU + Linear
         out = self.PReLU(out)
+        print(f"out.shape after latent layer and prelu{ out.shape}")
         out = self.Linear2(out.permute(0, 3, 2, 1)).permute(0, 3, 2, 1)
 
         B, _, K, S = out.shape
 
         # OverlapAdd
         # [B, N*C, K, S] -> [B, N, C, K, S]
+        print(out.shape)
         out = out.reshape(B, -1, self.C, K, S).permute(0, 2, 1, 3, 4)
         out = out.reshape(B * self.C, -1, K, S)
         out = self.merge_feature(out, gap)  # [B*C, N, K, S]  -> [B*C, N, I]
@@ -368,6 +309,9 @@ class Separator(nn.Module):
         out = self.FeedForward1(out.permute(0, 2, 1))
         out = self.FeedForward2(out).permute(0, 2, 1)
         out = self.ReLU(out)
+
+
+
 
         return out
 
@@ -465,7 +409,7 @@ class Perceparator(nn.Module):
         R: Number of repeats
     """
 
-    def __init__(self, N=64, C=2, L=4, H=4, K=250, Global_B=2, Local_B=4):
+    def __init__(self, N=64, C=2, L=4, H=4, K=250, Overall_LC=8):
 
         super(Perceparator, self).__init__()
 
@@ -479,8 +423,7 @@ class Perceparator(nn.Module):
         self.trnfr_heads = H  # Pay attention to the number
         self.trnfr_layers = 6
         self.K = K  # Block size
-        self.Global_B = Global_B  # Global cycle number
-        self.Local_B = Local_B  # Local cycle number
+        self.Overall_LC = Overall_LC #overall loop cycle of perceiver
 
         self.encoder = Encoder(self.L, self.N)
 
@@ -494,8 +437,7 @@ class Perceparator(nn.Module):
             self.trnfr_heads,
             self.trnfr_layers,
             self.K,
-            self.Global_B,
-            self.Local_B,
+            self.Overall_LC
         )
 
         self.decoder = Decoder(self.L, self.N)
@@ -621,8 +563,7 @@ if __name__ == "__main__":
         L=2,  # length of filters
         H=8,  # number of multihead atten
         K=250,  # chunk length
-        Global_B=2,  # overall external loop of seperator
-        Local_B=8,  # overall internal loop of individual transformer
+        Overall_LC = 16 #no of times the perceiver is looped
     )
 
     print(
@@ -633,4 +574,4 @@ if __name__ == "__main__":
 
     y = model(x)
 
-    print(y.shape)
+    print(f"bhaion aur behenon hum aa gaye aant tak: {y.shape}")
