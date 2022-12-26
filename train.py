@@ -124,7 +124,7 @@ def main(config):
 
 
 if __name__ == "__main__":
-    path = r"config/train/train.json5"
+    path = r"/kaggle/working/perceparator/config/train/train.json5"
     with open(path) as f:
         configuration = json5.load(f)
     main(configuration)

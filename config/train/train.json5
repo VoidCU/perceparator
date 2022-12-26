@@ -2,14 +2,14 @@
   seed: 0,
 
   train_dataset: {
-    train_dir: "./dataset/min/tr",
+    train_dir: "/kaggle/working/perceparator/dataset/min/tr",
     batch_size: 10,
     sample_rate: 8000,
     segment: -1,
   },
 
   validation_dataset: {
-    validation_dir: "./dataset/min/cv",
+    validation_dir: "/kaggle/working/perceparator/dataset/min/cv",
     batch_size: 10,
     sample_rate: 8000,
     segment: -1,
@@ -80,7 +80,7 @@
   },
 
   save_load: {
-    save_folder: "./checkpoint/",
+    save_folder: "/kaggle/working/perceparator/checkpoint/",
     checkpoint: true,
     continue_from: "",
     model_path: "final.path.tar",
