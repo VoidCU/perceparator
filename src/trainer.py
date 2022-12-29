@@ -72,43 +72,43 @@ class Trainer(object):
 
     def train(self):
         for epoch in range(self.start_epoch, self.epochs):
-            print("Train Start...")
+#             print("Train Start...")
 
-            self.model.train()  # Set the model to training mode
+#             self.model.train()  # Set the model to training mode
 
-            start_time = time.time()  # Training start time
+#             start_time = time.time()  # Training start time
 
-            tr_loss = self._run_one_epoch(epoch)  # Training model
+#             tr_loss = self._run_one_epoch(epoch)  # Training model
 
-            gc.collect()
-            torch.cuda.empty_cache()
+#             gc.collect()
+#             torch.cuda.empty_cache()
 
-            self.write.add_scalar("train loss", tr_loss, epoch+1)
+#             self.write.add_scalar("train loss", tr_loss, epoch+1)
 
-            end_time = time.time()  # Time of training
-            run_time = end_time - start_time  # Training time
+#             end_time = time.time()  # Time of training
+#             run_time = end_time - start_time  # Training time
 
-            print('-' * 85)
-            print('End of Epoch {0} | Time {1:.2f}s | Train Loss {2:.3f}'.format(
-                epoch+1, run_time, tr_loss))
-            print('-' * 85)
+#             print('-' * 85)
+#             print('End of Epoch {0} | Time {1:.2f}s | Train Loss {2:.3f}'.format(
+#                 epoch+1, run_time, tr_loss))
+#             print('-' * 85)
 
-            if self.checkpoint:
-                # Save each training model
-                file_path = os.path.join(
-                    self.save_folder, 'epoch%d.pth.tar' % (epoch + 1))
+#             if self.checkpoint:
+#                 # Save each training model
+#                 file_path = os.path.join(
+#                     self.save_folder, 'epoch%d.pth.tar' % (epoch + 1))
 
-                if self.continue_from == "":
-                    if isinstance(self.model, torch.nn.DataParallel):
-                        self.model = self.model.module
+#                 if self.continue_from == "":
+#                     if isinstance(self.model, torch.nn.DataParallel):
+#                         self.model = self.model.module
 
-                torch.save(self.model.serialize(self.model,
-                                                self.optimizer,
-                                                epoch + 1,
-                                                tr_loss=self.tr_loss,
-                                                cv_loss=self.cv_loss), file_path)
+#                 torch.save(self.model.serialize(self.model,
+#                                                 self.optimizer,
+#                                                 epoch + 1,
+#                                                 tr_loss=self.tr_loss,
+#                                                 cv_loss=self.cv_loss), file_path)
 
-                print('Saving checkpoint model to %s' % file_path)
+#                 print('Saving checkpoint model to %s' % file_path)
 
             print('Cross validation Start...')
             gc.collect()
