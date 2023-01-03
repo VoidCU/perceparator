@@ -1,7 +1,7 @@
 import os
 import librosa
 import torch
-from dataset.data import EvalDataLoader, EvalDataset
+from dataset.data import DataLoader, MyDataset
 from model.perceiver import Perceparator
 from src.utils import remove_pad
 import json5
@@ -23,7 +23,7 @@ def main(config):
         model.cuda()
 
     # Download Data
-    eval_dataset = EvalDataset(
+    eval_dataset = MyDataset(
         config["mix_dir"],
         config["mix_json"],
         batch_size=config["batch_size"],
@@ -31,7 +31,7 @@ def main(config):
         # segment=config["segment"],
     )
 
-    eval_loader = EvalDataLoader(eval_dataset, batch_size=1)
+    eval_loader = DataLoader(eval_dataset, batch_size=1)
 
     os.makedirs(config["out_dir"], exist_ok=True)
     os.makedirs(config["out_dir"] + "/mix/", exist_ok=True)
