@@ -193,7 +193,7 @@ class Perceiver(nn.Module):
         for pb in self.perceiver_blocks:
             latent = pb(x, latent)
             # output += latent
-        print(latent.size())
+        # print(latent.size())
         return latent
 
 
@@ -399,6 +399,7 @@ class Perceparator(nn.Module):
         H: Multi-head
         K: segment size
         R: Number of repeats
+        Overall_LC: overall loop cycle of perceiver
     """
 
     def __init__(self, N=64, C=2, L=4, H=4, K=250, Overall_LC=8):
@@ -511,8 +512,7 @@ class Perceparator(nn.Module):
             L=package["L"],
             H=package["H"],
             K=package["K"],
-            Global_B=package["Global_B"],
-            Local_B=package["Local_B"],
+            Overall_LC=package["Overall_LC"],
         )
 
         model.load_state_dict(package["state_dict"])
@@ -529,8 +529,7 @@ class Perceparator(nn.Module):
             "L": model.L,
             "H": model.trnfr_heads,
             "K": model.K,
-            # "Global_B": model.Global_B,
-            # "Local_B": model.Local_B,
+            "Overall_LC": model.Overall_LC,
             # state
             "state_dict": model.state_dict(),
             "optim_dict": optimizer.state_dict(),

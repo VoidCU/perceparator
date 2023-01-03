@@ -82,7 +82,7 @@
   save_load: {
     save_folder: "./checkpoint/",
     checkpoint: true,
-    continue_from: "",
+    continue_from: "epoch3.pth.tar",
     model_path: "final.path.tar",
   },
 
