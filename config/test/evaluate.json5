@@ -1,21 +1,19 @@
 {
-  "model": "sandglasset",
+  model: "perceparator",
 
-  "model_path": "./checkpoint/final.path.tar",
+  model_path: "./checkpoint/epoch2.pth.tar",
 
-  "evaluate_dataset":
-  {
-    "data_dir": "./dataset/json/tt",
+  evaluate_dataset: {
+    data_dir: "./dataset/min/tt",
 
-    "batch_size": 1,
+    batch_size: 1,
 
-    "sample_rate": 8000,
+    sample_rate: 8000,
 
-    "segment": -1,
+    segment: -1,
   },
 
-  "cal_sdr": true,
+  cal_sdr: true,
 
-
-  "use_cuda": true,
+  use_cuda: false,
 }

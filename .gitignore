@@ -2,5 +2,6 @@ min
 mmmm
 new
 checkpoint
+epoch*
 .dccache
 logs

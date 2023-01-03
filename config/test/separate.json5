@@ -1,17 +1,19 @@
 {
-  "model_path": "./checkpoint/final.path.tar",
+  model_path: "./checkpoint/epoch1.pth.tar",
 
-  "mix_dir": "dataset/min/tt/mix",
+  mix_dir: "./dataset/min/tt",
 
-  "mix_json": "dataset/json/tt/mix.json",
+  mix_json: "./dataset/json",
 
-  "out_dir": "./result",
+  out_dir: "./result",
 
-  "model": "sandglasset",
+  model: "perceparator",
 
-  "use_cuda": true,
+  use_cuda: false,
 
-  "sample_rate": 8000,
+  sample_rate: 8000,
 
-  "batch_size": 1,
+  batch_size: 1,
+
+  segment: -1,
 }
