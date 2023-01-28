@@ -1,6 +1,8 @@
 import os
 import time
 import torch
+import asteroid.losses as AL
+
 from src.pit_criterion import cal_loss_pit, cal_loss_no, MixerMSE
 from torch.utils.tensorboard import SummaryWriter
 import gc
@@ -13,7 +15,7 @@ class Trainer(object):
         self.cv_loader = data["cv_loader"]
         self.model = model
         self.optimizer = optimizer
-
+        self.loss_func = AL.PITLossWrapper(AL.PairwiseNegSDR('snr'), pit_from='pw_mtx')
         # Training config
         self.use_cuda = config["train"]["use_cuda"]  # use or not GPU
         self.epochs = config["train"]["epochs"]  # Training batches
@@ -78,6 +80,8 @@ class Trainer(object):
 
             self.model.train()  # Set the model to training mode
 
+            # self.model.cuda()
+
             start_time = time.time()  # Training start time
 
             tr_loss = self._run_one_epoch(epoch)  # Training model
@@ -108,83 +112,99 @@ class Trainer(object):
                     if isinstance(self.model, torch.nn.DataParallel):
                         self.model = self.model.module
 
-                torch.save(
-                    self.model.serialize(
-                        self.model,
-                        self.optimizer,
-                        epoch + 1,
-                        tr_loss=self.tr_loss,
-                        cv_loss=self.cv_loss,
-                    ),
-                    file_path,
-                )
+                if (epoch+1)%5==0:
+                    torch.save(
+                        self.model.serialize(
+                            self.model,
+                            self.optimizer,
+                            epoch + 1,
+                            tr_loss=self.tr_loss,
+                            cv_loss=self.cv_loss,
+                        ),
+                        file_path,
+                    )
 
                 print("Saving checkpoint model to %s" % file_path)
 
-        #     print('Cross validation Start...')
-        #     gc.collect()
-        #     torch.cuda.empty_cache()
-        #     self.model.eval()  # Set the model as the verification mode
+            # print("Cross validation Start...")
+            # gc.collect()
+            # torch.cuda.empty_cache()
+            # self.model.eval()  # Set the model as the verification mode
 
-        #     start_time = time.time()  # Verification start time
+            # start_time = time.time()  # Verification start time
 
-        #     val_loss = self._run_one_epoch(
-        #         epoch, cross_valid=True)  # Verification model
+            # val_loss = self._run_one_epoch(
+            #     epoch, cross_valid=True
+            # )  # Verification model
 
-        #     self.write.add_scalar("validation loss", val_loss, epoch+1)
+            # self.write.add_scalar("validation loss", val_loss, epoch + 1)
 
-        #     end_time = time.time()  # Verification end time
-        #     run_time = end_time - start_time  # Training time
+            # end_time = time.time()  # Verification end time
+            # run_time = end_time - start_time  # Training time
 
-        #     print('-' * 85)
-        #     print('End of Epoch {0} | Time {1:.2f}s | ''Valid Loss {2:.3f}'.format(
-        #         epoch+1, run_time, val_loss))
-        #     print('-' * 85)
+            # print("-" * 85)
+            # print(
+            #     "End of Epoch {0} | Time {1:.2f}s | "
+            #     "Valid Loss {2:.3f}".format(epoch + 1, run_time, val_loss)
+            # )
+            # print("-" * 85)
 
-        #     # Whether to adjust the learning rate
-        #     if self.half_lr:
-        #         # Verify whether the loss is increased
-        #         if val_loss >= self.prev_val_loss:
-        #             self.val_no_improve += 1  # The number of statistics has not been improved
+            # # Whether to adjust the learning rate
+            # if self.half_lr:
+            #     # Verify whether the loss is increased
+            #     if val_loss >= self.prev_val_loss:
+            #         self.val_no_improve += (
+            #             1  # The number of statistics has not been improved
+            #         )
 
-        #             # If the training 3 EPOCH has not been improved, the learning rate is halved
-        #             if self.val_no_improve >= 3:
-        #                 self.halving = True
+            #         # If the training 3 EPOCH has not been improved, the learning rate is halved
+            #         if self.val_no_improve >= 3:
+            #             self.halving = True
 
-        #             # If the 10 EPOCH has not been improved, the training is over
-        #             if self.val_no_improve >= 10 and self.early_stop:
-        #                 print("No improvement for 10 epochs, early stopping.")
-        #                 break
-        #         else:
-        #             self.val_no_improve = 0
+            #         # If the 10 EPOCH has not been improved, the training is over
+            #         if self.val_no_improve >= 10 and self.early_stop:
+            #             print("No improvement for 10 epochs, early stopping.")
+            #             break
+            #     else:
+            #         self.val_no_improve = 0
 
-        #     if self.halving:
-        #         optime_state = self.optimizer.state_dict()
-        #         optime_state['param_groups'][0]['lr'] = optime_state['param_groups'][0]['lr']/2.0
-        #         self.optimizer.load_state_dict(optime_state)
-        #         print('Learning rate adjusted to: {lr:.6f}'.format(
-        #             lr=optime_state['param_groups'][0]['lr']))
-        #         self.halving = False
+            # if self.halving:
+            #     optime_state = self.optimizer.state_dict()
+            #     optime_state["param_groups"][0]["lr"] = (
+            #         optime_state["param_groups"][0]["lr"] / 2.0
+            #     )
+            #     self.optimizer.load_state_dict(optime_state)
+            #     print(
+            #         "Learning rate adjusted to: {lr:.6f}".format(
+            #             lr=optime_state["param_groups"][0]["lr"]
+            #         )
+            #     )
+            #     self.halving = False
 
-        #     self.prev_val_loss = val_loss  # Current loss
+            # self.prev_val_loss = val_loss  # Current loss
 
-        #     self.tr_loss[epoch] = tr_loss
-        #     self.cv_loss[epoch] = val_loss
+            # self.tr_loss[epoch] = tr_loss
+            # self.cv_loss[epoch] = val_loss
 
-        #    # Save the best model
-        #     if val_loss < self.best_val_loss:
+            # # Save the best model
+            # if val_loss < self.best_val_loss:
 
-        #         self.best_val_loss = val_loss  # Minimum verification loss value
+            #     self.best_val_loss = val_loss  # Minimum verification loss value
 
-        #         file_path = os.path.join(self.save_folder, self.model_path)
+            #     file_path = os.path.join(self.save_folder, self.model_path)
 
-        #         torch.save(self.model.serialize(self.model,
-        #                                         self.optimizer,
-        #                                         epoch + 1,
-        #                                         tr_loss=self.tr_loss,
-        #                                         cv_loss=self.cv_loss), file_path)
+            #     torch.save(
+            #         self.model.serialize(
+            #             self.model,
+            #             self.optimizer,
+            #             epoch + 1,
+            #             tr_loss=self.tr_loss,
+            #             cv_loss=self.cv_loss,
+            #         ),
+            #         file_path,
+            #     )
 
-        #         print("Find better validated model, saving to %s" % file_path)
+            #     print("Find better validated model, saving to %s" % file_path)
 
     def _run_one_epoch(self, epoch, cross_valid=False):
 
@@ -207,6 +227,7 @@ class Trainer(object):
             gc.collect()
             torch.cuda.empty_cache()
             # use or not GPU train
+            #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             # if torch.cuda.is_available():
             #     padded_mixture = padded_mixture.cuda()
             #     mixture_lengths = mixture_lengths.cuda()
@@ -217,10 +238,15 @@ class Trainer(object):
             # print(torch.cuda.max_memory_allocated())
 
             estimate_source = self.model(padded_mixture)  # Put the data in the model
-            loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_pit(
-                padded_source, estimate_source, mixture_lengths
-            )
 
+            # loss=get_si_snr_with_pitwrapper(padded_source,estimate_source[0])
+            # loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_pit(
+            #     padded_source, estimate_source, mixture_lengths
+            # )
+            # print(estimate_source.size())
+            # print(padded_source.unsqueeze(0).size())
+            # exit()
+            loss = self.loss_func(estimate_source, padded_source.unsqueeze(0))
             # loss, max_snr, estimate_source, reorder_estimate_source = cal_loss_no(padded_source,
             #                                                                       estimate_source,
             #                                                                       mixture_lengths)

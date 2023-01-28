@@ -43,7 +43,7 @@
 
   train: {
     use_cuda: true,
-    epochs: 100,
+    epochs: 250,
     half_lr: true,
     early_stop: true,
     max_norm: 5,
@@ -82,7 +82,7 @@
   save_load: {
     save_folder: "./checkpoint/",
     checkpoint: true,
-    continue_from: "epoch3.pth.tar",
+    continue_from: "epoch96.pth.tar",
     model_path: "final.path.tar",
   },
 

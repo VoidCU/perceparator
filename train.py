@@ -118,6 +118,12 @@ def main(config):
         print("Not support optimizer")
         return
 
+    print(
+        "Total parameters: {:.3f} million".format(
+            sum([param.nelement() for param in model.parameters()]) / 1e6
+        )
+    )
+    
     trainer = Trainer(data, model, optimize, config)
 
     trainer.train()
