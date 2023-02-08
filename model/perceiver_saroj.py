@@ -56,8 +56,6 @@ class Decoder(nn.Module):
 
         return x
 
-
-# Positional encoding
 class Positional_Embedding(nn.Module):
     def __init__(self, input_shape, input_channels, embed_dim, bands=4):
         super().__init__()
@@ -135,22 +133,16 @@ class LatentTransformer(nn.Module):
     def __init__(self, embed_dim, mlp_dim, n_heads, dropout, n_layers):
         super().__init__()
 
-        self.transformer = nn.ModuleList(
-            [
-                PerceiverAttention(
+        self.transformer = PerceiverAttention(
                     embed_dim=embed_dim,
                     mlp_dim=mlp_dim,
                     n_heads=n_heads,
                     dropout=dropout,
                 )
-                for l in range(n_layers)
-            ]
-        )
 
-    def forward(self, l):
-        for trnfr in self.transformer:
-            l = trnfr(l, l)
 
+    def forward(self, l): 
+        l = self.transformer(l, l)
         return l
 
 
@@ -183,15 +175,15 @@ class Perceiver(nn.Module):
                 for b in range(n_blocks)
             ]
         )
+                
+
 
     def forward(self, x, latent):
         x = self.embed(x)
-        # output = latent
 
         for pb in self.perceiver_blocks:
             latent = pb(x, latent)
-            # print(pb)
-            # output += latent
+
         
         return latent
 
@@ -246,8 +238,8 @@ class Separator(nn.Module):
             in_features=self.input_shape, out_features=self.input_shape, bias=False
         )
 
-        self.LinearLatent1 = nn.Linear(16, 16)
-        self.LinearLatent2 = nn.Linear(16, 250)
+        self.LinearLatent1 = nn.Linear(self.latent_dim, self.latent_dim)
+        self.LinearLatent2 = nn.Linear(self.latent_dim, 250)
 
         self.PReLU = nn.PReLU()
         self.Linear2 = nn.Linear(
@@ -274,7 +266,7 @@ class Separator(nn.Module):
 
         # Chunking
         # Block，[B, N, I] -> [B, N, K, S]
-        out, gap = self.split_feature(x, self.K) #outshape(1,256,250,322)
+        out = self.split_feature(x, self.K) #outshape(1,256,250,322)
 
         # Perceiver
         B, N, K, P = out.shape
@@ -284,11 +276,11 @@ class Separator(nn.Module):
         out = self.perceiver(out.permute(1, 0, 2), latent).permute(1, 0, 2)
 
 
-        out = out.reshape(1, 256, 16, P)
+        out = out.reshape(1, 256,self.latent_dim, P)
 
         # Geetting out the original size from latent array
 
-        out = self.LinearLatent1(out.permute(0, 1, 3, 2).reshape(1 * 256 * P, 16))
+        out = self.LinearLatent1(out.permute(0, 1, 3, 2).reshape(1 * 256 * P, self.latent_dim))
         out = self.LinearLatent2(out).reshape(1, 256, P, 250).permute(0, 1, 3, 2)
         
         # PReLU + Linear
@@ -299,8 +291,12 @@ class Separator(nn.Module):
         # OverlapAdd
         # [B, N*C, K, S] -> [B, N, C, K, S]
         out = out.reshape(B, -1, self.C, K, S).permute(0, 2, 1, 3, 4)
-        out = out.reshape(B * self.C, -1, K, S)
-        out = self.merge_feature(out, gap)  # [B*C, N, K, S]  -> [B*C, N, I]
+        out = out.reshape(B * self.C, -1, K, S).transpose(2, 3)
+
+        #mergining all
+        out=out.reshape(self.C,N,P*K)
+        rajan=torch.zeros(2,256,2).cuda()
+        out=torch.cat([out,rajan],2)
         
         # FFW + ReLU
         out = self.FeedForward1(out.permute(0, 2, 1))
@@ -309,85 +305,25 @@ class Separator(nn.Module):
 
         return out
 
-    def pad_segment(self, input, segment_size):
 
-        # Input feature: (B, N, T)
-        # segment_size=250
-        batch_size, dim, seq_len = input.shape
-        segment_stride = segment_size // 2  # 250/2=125
-
-        rest = (
-            segment_size - (segment_stride + seq_len % segment_size) % segment_size
-        )  # 123
-
-        if rest > 0:
-            pad = Variable(torch.zeros(batch_size, dim, rest)).type(input.type())
-            input = torch.cat([input, pad], 2)
-
-        pad_aux = Variable(torch.zeros(batch_size, dim, segment_stride)).type(
-            input.type()
-        )
-        input = torch.cat([pad_aux, input, pad_aux], 2)
-        return input, rest
 
     def split_feature(self, input, segment_size):
 
         # Divide the features into pieces of section sizefeatures into pieces of section size
         # Input feature: (B, N, T)
 
-        input, rest = self.pad_segment(input, segment_size)
 
         batch_size, dim, seq_len = input.shape
-        segment_stride = segment_size // 2
 
-        segments1 = (
-            input[:, :, :-segment_stride]
-            .contiguous()
-            .view(batch_size, dim, -1, segment_size)
-        )
-        segments2 = (
-            input[:, :, segment_stride:]
-            .contiguous()
-            .view(batch_size, dim, -1, segment_size)
-        )
         segments = (
-            torch.cat([segments1, segments2], 3)
-            .view(batch_size, dim, -1, segment_size)
-            .transpose(2, 3)
+            input[:, :, :-(seq_len%segment_size)]
+            .contiguous()
+            .view(batch_size, dim, -1, segment_size).transpose(2, 3)
         )
 
-        return segments.contiguous(), rest
+        return segments.contiguous()
 
-    def merge_feature(self, input, rest):
-
-        # Merge the characteristics of segments into a complete discourse
-        # Input feature: (B, N, L, K)
-
-        batch_size, dim, segment_size, _ = input.shape
-        segment_stride = segment_size // 2
-        input = (
-            input.transpose(2, 3)
-            .contiguous()
-            .view(batch_size, dim, -1, segment_size * 2)
-        )  # B, N, K, L
-
-        input1 = (
-            input[:, :, :, :segment_size]
-            .contiguous()
-            .view(batch_size, dim, -1)[:, :, segment_stride:]
-        )
-        input2 = (
-            input[:, :, :, segment_size:]
-            .contiguous()
-            .view(batch_size, dim, -1)[:, :, :-segment_stride]
-        )
-
-        output = input1 + input2
-
-        if rest > 0:
-            output = output[:, :, :-rest]
-
-        return output.contiguous()  # B, N, T
+    
 
 
 class Perceparator(nn.Module):
@@ -407,14 +343,14 @@ class Perceparator(nn.Module):
         super(Perceparator, self).__init__()
 
         self.N = N  # Code output channel
-        self.latent_dim = 16
+        self.latent_dim = 48
         self.embed_dim = 256
         self.attn_mlp_dim = 16
         self.trnfr_mlp_dim = 16
         self.C = C  # The number of separation sources
         self.L = L  # Coder convolution core size
         self.trnfr_heads = H  # Pay attention to the number
-        self.trnfr_layers = 6
+        self.trnfr_layers = 4
         self.K = K  # Block size
         self.Overall_LC = Overall_LC  # overall loop cycle of perceiver
 
@@ -470,9 +406,7 @@ class Perceparator(nn.Module):
             :, :, self.L // 2 : -(rest + self.L // 2)
         ].contiguous()  # B, 1, T
         audio = torch.cat(audio, dim=1)  # [B, C, T]
-        print(audio.shape)
-        torch.save(audio,"data_decoded.pt")
-        exit()
+
         return audio
 
     def pad_signal(self, input):

@@ -2,7 +2,8 @@ from adamp import AdamP, SGDP
 import numpy as np
 import json5
 from model.sepformer import Sepformer
-from model.perceiver import Perceparator
+from model.perceiver_saroj import Perceparator
+# from model.perceiver import Perceparator
 from src.trainer import Trainer
 from dataset.data import DataLoader, MyDataset
 import torch
@@ -75,10 +76,6 @@ def main(config):
         )
     else:
         print("No loaded model!")
-
-    # if torch.cuda.is_available():
-    #     model = torch.nn.DataParallel(model)
-    #     model.cuda()
 
     if config["optimizer"]["type"] == "sgd":
         optimize = torch.optim.SGD(
